@@ -3,19 +3,24 @@ Whisper realtime streaming for long speech-to-text transcription and translation
 
 ## Installation
 
+This code work with two kinds of backends. Both require
+
 ```
-pip install git+https://github.com/linto-ai/whisper-timestamped
-XDG_CACHE_HOME=$(pwd)/pip-cache pip install git+https://github.com/linto-ai/whisper-timestamped
 pip install librosa
 pip install opus-fast-mosestokenizer
-pip install torch
 ```
+
+The most recommended backend is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
+
+Alternative, less restrictive, but slowe backend is [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
+
+The backend is loaded only when chosen. The unused one does not have to be installed.
 
 ## Usage
 
 ```
 (p3) $ python3 whisper_online.py -h
-usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model MODEL] [--model_dir MODEL_DIR] [--lan LAN] [--start_at START_AT] audio_path
+usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model MODEL] [--model_dir MODEL_DIR] [--lan LAN] [--start_at START_AT] [--backend {faster-whisper,whisper_timestamped}] audio_path
 
 positional arguments:
   audio_path
@@ -30,6 +35,8 @@ options:
   --lan LAN, --language LAN
                         Language code for transcription, e.g. en,de,cs.
   --start_at START_AT   Start processing audio at this time.
+  --backend {faster-whisper,whisper_timestamped}
+                        Load only this backend for Whisper processing.
 ```
 
 Example:
