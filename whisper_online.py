@@ -22,6 +22,8 @@ def load_audio_chunk(fname, beg, end):
 
 class ASRBase:
 
+    sep = " "
+
     def __init__(self, modelsize, lan, cache_dir):
         self.original_language = lan 
 
@@ -74,6 +76,8 @@ class FasterWhisperASR(ASRBase):
         import faster_whisper
     """
 
+    sep = ""
+
     def load_model(self, modelsize, cache_dir):
         # cache_dir is not set, it seemed not working. Default ~/.cache/huggingface/hub is used.
 
@@ -98,8 +102,8 @@ class FasterWhisperASR(ASRBase):
         o = []
         for segment in segments:
             for word in segment.words:
-                # stripping the spaces
-                w = word.word.strip()
+                # not stripping the spaces -- should not be merged with them!
+                w = word.word
                 t = (word.start, word.end, w)
                 o.append(t)
         return o
@@ -108,19 +112,6 @@ class FasterWhisperASR(ASRBase):
         return [s.end for s in res]
 
 
-
-def to_flush(sents, offset=0):
-    # concatenates the timestamped words or sentences into one sequence that is flushed in one line
-    # sents: [(beg1, end1, "sentence1"), ...] or [] if empty
-    # return: (beg1,end-of-last-sentence,"concatenation of sentences") or (None, None, "") if empty
-    t = " ".join(s[2] for s in sents)
-    if len(sents) == 0:
-        b = None
-        e = None
-    else:
-        b = offset + sents[0][0]
-        e = offset + sents[-1][1]
-    return (b,e,t)
 
 class HypothesisBuffer:
 
@@ -254,8 +245,8 @@ class OnlineASRProcessor:
         self.transcript_buffer.insert(tsw, self.buffer_time_offset)
         o = self.transcript_buffer.flush()
         self.commited.extend(o)
-        print(">>>>COMPLETE NOW:",to_flush(o),file=sys.stderr,flush=True)
-        print("INCOMPLETE:",to_flush(self.transcript_buffer.complete()),file=sys.stderr,flush=True)
+        print(">>>>COMPLETE NOW:",self.to_flush(o),file=sys.stderr,flush=True)
+        print("INCOMPLETE:",self.to_flush(self.transcript_buffer.complete()),file=sys.stderr,flush=True)
 
         # there is a newly confirmed text
         if o:
@@ -301,7 +292,7 @@ class OnlineASRProcessor:
             #self.chunk_at(t)
 
         print(f"len of buffer now: {len(self.audio_buffer)/self.SAMPLING_RATE:2.2f}",file=sys.stderr)
-        return to_flush(o)
+        return self.to_flush(o)
 
     def chunk_completed_sentence(self):
         if self.commited == []: return
@@ -383,10 +374,25 @@ class OnlineASRProcessor:
         Returns: the same format as self.process_iter()
         """
         o = self.transcript_buffer.complete()
-        f = to_flush(o)
+        f = self.to_flush(o)
         print("last, noncommited:",f,file=sys.stderr)
         return f
 
+
+    def to_flush(self, sents, sep=None, offset=0, ):
+        # concatenates the timestamped words or sentences into one sequence that is flushed in one line
+        # sents: [(beg1, end1, "sentence1"), ...] or [] if empty
+        # return: (beg1,end-of-last-sentence,"concatenation of sentences") or (None, None, "") if empty
+        if sep is None:
+            sep = self.asr.sep
+        t = sep.join(s[2] for s in sents)
+        if len(sents) == 0:
+            b = None
+            e = None
+        else:
+            b = offset + sents[0][0]
+            e = offset + sents[-1][1]
+        return (b,e,t)
 
 
 
@@ -401,6 +407,7 @@ parser.add_argument('--model_dir', type=str, default='disk-cache-dir', help="the
 parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
 parser.add_argument('--start_at', type=float, default=0.0, help='Start processing audio at this time.')
 parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped"],help='Load only this backend for Whisper processing.')
+parser.add_argument('--offline', action="store_true", default=False, help='Offline mode.')
 args = parser.parse_args()
 
 audio_path = args.audio_path
@@ -440,6 +447,9 @@ a = load_audio_chunk(audio_path,0,1)
 # warm up the ASR, because the very first transcribe takes much more time than the other
 asr.transcribe(a)
 
+beg = args.start_at
+start = time.time()-beg
+
 def output_transcript(o):
     # output format in stdout is like:
     # 4186.3606 0 1720 Takhle to je
@@ -453,18 +463,9 @@ def output_transcript(o):
     else:
         print(o,file=sys.stderr,flush=True)
 
-beg = args.start_at
-end = 0
-start = time.time()-beg
-while True:
-    now = time.time() - start
-    if now < end+min_chunk:
-        time.sleep(min_chunk+end-now)
-    end = time.time() - start
-    a = load_audio_chunk(audio_path,beg,end)
-    beg = end
+if args.offline: ## offline mode processing (for testing/debugging)
+    a = load_audio(audio_path)
     online.insert_audio_chunk(a)
-
     try:
         o = online.process_iter()
     except AssertionError:
@@ -472,13 +473,31 @@ while True:
         pass
     else:
         output_transcript(o)
-    now = time.time() - start
-    print(f"## last processed {end:.2f} s, now is {now:.2f}, the latency is {now-end:.2f}",file=sys.stderr)
+else: # online = simultaneous mode
+    end = 0
+    while True:
+        now = time.time() - start
+        if now < end+min_chunk:
+            time.sleep(min_chunk+end-now)
+        end = time.time() - start
+        a = load_audio_chunk(audio_path,beg,end)
+        beg = end
+        online.insert_audio_chunk(a)
 
-    print(file=sys.stderr,flush=True)
+        try:
+            o = online.process_iter()
+        except AssertionError:
+            print("assertion error",file=sys.stderr)
+            pass
+        else:
+            output_transcript(o)
+        now = time.time() - start
+        print(f"## last processed {end:.2f} s, now is {now:.2f}, the latency is {now-end:.2f}",file=sys.stderr)
 
-    if end >= duration:
-        break
+        print(file=sys.stderr,flush=True)
+
+        if end >= duration:
+            break
 
 o = online.finish()
 output_transcript(o)
