@@ -19,24 +19,32 @@ The backend is loaded only when chosen. The unused one does not have to be insta
 ## Usage
 
 ```
-(p3) $ python3 whisper_online.py -h
-usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model MODEL] [--model_dir MODEL_DIR] [--lan LAN] [--start_at START_AT] [--backend {faster-whisper,whisper_timestamped}] audio_path
+usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
+                         [--start_at START_AT] [--backend {faster-whisper,whisper_timestamped}] [--offline] [--vad]
+                         audio_path
 
 positional arguments:
-  audio_path
+  audio_path            Filename of 16kHz mono channel wav, on which live streaming is simulated.
 
 options:
   -h, --help            show this help message and exit
   --min-chunk-size MIN_CHUNK_SIZE
                         Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received by this time.
-  --model MODEL         name of the Whisper model to use (default: large-v2, options: {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}
+  --model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}
+                        Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.
+  --model_cache_dir MODEL_CACHE_DIR
+                        Overriding the default model cache dir where models downloaded from the hub are saved
   --model_dir MODEL_DIR
-                        the path where Whisper models are saved (or downloaded to). Default: ./disk-cache-dir
+                        Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.
   --lan LAN, --language LAN
                         Language code for transcription, e.g. en,de,cs.
+  --task {transcribe,translate}
+                        Transcribe or translate.
   --start_at START_AT   Start processing audio at this time.
   --backend {faster-whisper,whisper_timestamped}
                         Load only this backend for Whisper processing.
+  --offline             Offline mode.
+  --vad                 Use VAD = voice activity detection, with the default parameters. 
 ```
 
 Example:
