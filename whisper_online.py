@@ -22,18 +22,23 @@ def load_audio_chunk(fname, beg, end):
 
 class ASRBase:
 
+    # join transcribe words with this character (" " for whisper_timestamped, "" for faster-whisper because it emits the spaces when neeeded)
     sep = " "
 
-    def __init__(self, modelsize, lan, cache_dir):
+    def __init__(self, lan, modelsize=None, cache_dir=None, model_dir=None):
+        self.transcribe_kargs = {}
         self.original_language = lan 
 
-        self.model = self.load_model(modelsize, cache_dir)
+        self.model = self.load_model(modelsize, cache_dir, model_dir)
 
     def load_model(self, modelsize, cache_dir):
-        raise NotImplemented("mus be implemented in the child class")
+        raise NotImplemented("must be implemented in the child class")
 
     def transcribe(self, audio, init_prompt=""):
-        raise NotImplemented("mus be implemented in the child class")
+        raise NotImplemented("must be implemented in the child class")
+
+    def use_vad(self):
+        raise NotImplemented("must be implemented in the child class")
 
 
 ## requires imports:
@@ -49,7 +54,9 @@ class WhisperTimestampedASR(ASRBase):
         import whisper_timestamped
     """
 
-    def load_model(self, modelsize, cache_dir):
+    def load_model(self, modelsize=None, cache_dir=None, model_dir=None):
+        if model_dir is not None:
+            print("ignoring model_dir, not implemented",file=sys.stderr)
         return whisper.load_model(modelsize, download_root=cache_dir)
 
     def transcribe(self, audio, init_prompt=""):
@@ -68,6 +75,9 @@ class WhisperTimestampedASR(ASRBase):
     def segments_end_ts(self, res):
         return [s["end"] for s in res["segments"]]
 
+    def use_vad(self):
+        raise NotImplemented("Feature use_vad is not implemented for whisper_timestamped backend.")
+
 
 class FasterWhisperASR(ASRBase):
     """Uses faster-whisper library as the backend. Works much faster, appx 4-times (in offline mode). For GPU, it requires installation with a specific CUDNN version.
@@ -78,11 +88,19 @@ class FasterWhisperASR(ASRBase):
 
     sep = ""
 
-    def load_model(self, modelsize, cache_dir):
-        # cache_dir is not set, it seemed not working. Default ~/.cache/huggingface/hub is used.
+    def load_model(self, modelsize=None, cache_dir=None, model_dir=None):
+
+        if model_dir is not None:
+            print(f"Loading whisper model from model_dir {model_dir}. modelsize and cache_dir parameters are not used.",file=sys.stderr)
+            model_size_or_path = model_dir
+        elif modelsize is not None:
+            model_size_or_path = modelsize
+        else:
+            raise ValueError("modelsize or model_dir parameter must be set")
+
 
         # this worked fast and reliably on NVIDIA L40
-        model = WhisperModel(modelsize, device="cuda", compute_type="float16")
+        model = WhisperModel(model_size_or_path, device="cuda", compute_type="float16", download_root=cache_dir)
 
         # or run on GPU with INT8
         # tested: the transcripts were different, probably worse than with FP16, and it was slightly (appx 20%) slower
@@ -90,12 +108,12 @@ class FasterWhisperASR(ASRBase):
 
         # or run on CPU with INT8
         # tested: works, but slow, appx 10-times than cuda FP16
-        #model = WhisperModel(model_size, device="cpu", compute_type="int8") #, download_root="faster-disk-cache-dir/")
+#        model = WhisperModel(modelsize, device="cpu", compute_type="int8") #, download_root="faster-disk-cache-dir/")
         return model
 
     def transcribe(self, audio, init_prompt=""):
-        wt = False
-        segments, info = self.model.transcribe(audio, language=self.original_language, initial_prompt=init_prompt, beam_size=5, word_timestamps=True, condition_on_previous_text=True)
+        # tested: beam_size=5 is faster and better than 1 (on one 200 second document from En ESIC, min chunk 0.01)
+        segments, info = self.model.transcribe(audio, language=self.original_language, initial_prompt=init_prompt, beam_size=5, word_timestamps=True, condition_on_previous_text=True, **self.transcribe_kargs)
         return list(segments)
 
     def ts_words(self, segments):
@@ -110,6 +128,12 @@ class FasterWhisperASR(ASRBase):
 
     def segments_end_ts(self, res):
         return [s.end for s in res]
+
+    def use_vad(self):
+        self.transcribe_kargs["vad_filter"] = True
+
+    def set_translate_task(self):
+        self.transcribe_kargs["task"] = "translate"
 
 
 
@@ -225,7 +249,7 @@ class OnlineASRProcessor:
             l += len(x)+1
             prompt.append(x)
         non_prompt = self.commited[k:]
-        return " ".join(prompt[::-1]), " ".join(t for _,_,t in non_prompt)
+        return self.asr.sep.join(prompt[::-1]), self.asr.sep.join(t for _,_,t in non_prompt)
 
     def process_iter(self):
         """Runs on the current audio buffer.
@@ -398,92 +422,88 @@ class OnlineASRProcessor:
 
 ## main:
 
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('audio_path', type=str, help="Filename of 16kHz mono channel wav, on which live streaming is simulated.")
-parser.add_argument('--min-chunk-size', type=float, default=1.0, help='Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received by this time.')
-parser.add_argument('--model', type=str, default='large-v2', help="name of the Whisper model to use (default: large-v2, options: {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}")
-parser.add_argument('--model_dir', type=str, default='disk-cache-dir', help="the path where Whisper models are saved (or downloaded to). Default: ./disk-cache-dir")
-parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
-parser.add_argument('--start_at', type=float, default=0.0, help='Start processing audio at this time.')
-parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped"],help='Load only this backend for Whisper processing.')
-parser.add_argument('--offline', action="store_true", default=False, help='Offline mode.')
-args = parser.parse_args()
+if __name__ == "__main__":
 
-audio_path = args.audio_path
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('audio_path', type=str, help="Filename of 16kHz mono channel wav, on which live streaming is simulated.")
+    parser.add_argument('--min-chunk-size', type=float, default=1.0, help='Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received by this time.')
+    parser.add_argument('--model', type=str, default='large-v2', choices="tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large".split(","),help="Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.")
+    parser.add_argument('--model_cache_dir', type=str, default=None, help="Overriding the default model cache dir where models downloaded from the hub are saved")
+    parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.")
+    parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
+    parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
+    parser.add_argument('--start_at', type=float, default=0.0, help='Start processing audio at this time.')
+    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped"],help='Load only this backend for Whisper processing.')
+    parser.add_argument('--offline', action="store_true", default=False, help='Offline mode.')
+    parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
+    args = parser.parse_args()
 
-SAMPLING_RATE = 16000
-duration = len(load_audio(audio_path))/SAMPLING_RATE
-print("Audio duration is: %2.2f seconds" % duration, file=sys.stderr)
+    audio_path = args.audio_path
 
-size = args.model
-language = args.lan
+    SAMPLING_RATE = 16000
+    duration = len(load_audio(audio_path))/SAMPLING_RATE
+    print("Audio duration is: %2.2f seconds" % duration, file=sys.stderr)
 
-t = time.time()
-print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",flush=True)
-#asr = WhisperASR(lan=language, modelsize=size)
+    size = args.model
+    language = args.lan
 
-if args.backend == "faster-whisper":
-    from faster_whisper import WhisperModel
-    asr_cls = FasterWhisperASR
-else:
-    import whisper
-    import whisper_timestamped
-#    from whisper_timestamped_model import WhisperTimestampedASR
-    asr_cls = WhisperTimestampedASR
+    t = time.time()
+    print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",flush=True)
+    #asr = WhisperASR(lan=language, modelsize=size)
 
-asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_dir)
-e = time.time()
-print(f"done. It took {round(e-t,2)} seconds.",file=sys.stderr)
-
-
-min_chunk = args.min_chunk_size
-online = OnlineASRProcessor(language,asr,min_chunk)
-
-
-# load the audio into the LRU cache before we start the timer
-a = load_audio_chunk(audio_path,0,1)
-
-# warm up the ASR, because the very first transcribe takes much more time than the other
-asr.transcribe(a)
-
-beg = args.start_at
-start = time.time()-beg
-
-def output_transcript(o):
-    # output format in stdout is like:
-    # 4186.3606 0 1720 Takhle to je
-    # - the first three words are:
-    #    - emission time from beginning of processing, in milliseconds
-    #    - beg and end timestamp of the text segment, as estimated by Whisper model. The timestamps are not accurate, but they're useful anyway
-    # - the next words: segment transcript
-    now = time.time()-start
-    if o[0] is not None:
-        print("%1.4f %1.0f %1.0f %s" % (now*1000, o[0]*1000,o[1]*1000,o[2]),flush=True)
+    if args.backend == "faster-whisper":
+        from faster_whisper import WhisperModel
+        asr_cls = FasterWhisperASR
     else:
-        print(o,file=sys.stderr,flush=True)
+        import whisper
+        import whisper_timestamped
+    #    from whisper_timestamped_model import WhisperTimestampedASR
+        asr_cls = WhisperTimestampedASR
 
-if args.offline: ## offline mode processing (for testing/debugging)
-    a = load_audio(audio_path)
-    online.insert_audio_chunk(a)
-    try:
-        o = online.process_iter()
-    except AssertionError:
-        print("assertion error",file=sys.stderr)
-        pass
-    else:
-        output_transcript(o)
-else: # online = simultaneous mode
-    end = 0
-    while True:
-        now = time.time() - start
-        if now < end+min_chunk:
-            time.sleep(min_chunk+end-now)
-        end = time.time() - start
-        a = load_audio_chunk(audio_path,beg,end)
-        beg = end
+    asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
+
+    if args.task == "translate":
+        asr.set_translate_task()
+
+
+    e = time.time()
+    print(f"done. It took {round(e-t,2)} seconds.",file=sys.stderr)
+
+    if args.vad:
+        print("setting VAD filter",file=sys.stderr)
+        asr.use_vad()
+
+    min_chunk = args.min_chunk_size
+    online = OnlineASRProcessor(language,asr,min_chunk)
+
+
+    # load the audio into the LRU cache before we start the timer
+    a = load_audio_chunk(audio_path,0,1)
+
+    # warm up the ASR, because the very first transcribe takes much more time than the other
+    asr.transcribe(a)
+
+    beg = args.start_at
+    start = time.time()-beg
+
+    def output_transcript(o):
+        # output format in stdout is like:
+        # 4186.3606 0 1720 Takhle to je
+        # - the first three words are:
+        #    - emission time from beginning of processing, in milliseconds
+        #    - beg and end timestamp of the text segment, as estimated by Whisper model. The timestamps are not accurate, but they're useful anyway
+        # - the next words: segment transcript
+        now = time.time()-start
+        if o[0] is not None:
+            print("%1.4f %1.0f %1.0f %s" % (now*1000, o[0]*1000,o[1]*1000,o[2]),file=sys.stderr,flush=True)
+            print("%1.4f %1.0f %1.0f %s" % (now*1000, o[0]*1000,o[1]*1000,o[2]),flush=True)
+        else:
+            print(o,file=sys.stderr,flush=True)
+
+    if args.offline: ## offline mode processing (for testing/debugging)
+        a = load_audio(audio_path)
         online.insert_audio_chunk(a)
-
         try:
             o = online.process_iter()
         except AssertionError:
@@ -491,13 +511,31 @@ else: # online = simultaneous mode
             pass
         else:
             output_transcript(o)
-        now = time.time() - start
-        print(f"## last processed {end:.2f} s, now is {now:.2f}, the latency is {now-end:.2f}",file=sys.stderr)
+    else: # online = simultaneous mode
+        end = 0
+        while True:
+            now = time.time() - start
+            if now < end+min_chunk:
+                time.sleep(min_chunk+end-now)
+            end = time.time() - start
+            a = load_audio_chunk(audio_path,beg,end)
+            beg = end
+            online.insert_audio_chunk(a)
 
-        print(file=sys.stderr,flush=True)
+            try:
+                o = online.process_iter()
+            except AssertionError:
+                print("assertion error",file=sys.stderr)
+                pass
+            else:
+                output_transcript(o)
+            now = time.time() - start
+            print(f"## last processed {end:.2f} s, now is {now:.2f}, the latency is {now-end:.2f}",file=sys.stderr)
 
-        if end >= duration:
-            break
+            print(file=sys.stderr,flush=True)
 
-o = online.finish()
-output_transcript(o)
+            if end >= duration:
+                break
+
+    o = online.finish()
+    output_transcript(o)
