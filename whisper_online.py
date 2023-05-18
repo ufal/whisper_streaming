@@ -158,10 +158,10 @@ class HypothesisBuffer:
             a,b,t = self.new[0]
             if abs(a - self.last_commited_time) < 1:
                 if self.commited_in_buffer:
-                    # it's going to search for 1, 2 or 3 consecutive words that are identical in commited and new. If they are, they're dropped.
+                    # it's going to search for 1, 2, ..., 5 consecutive words (n-grams) that are identical in commited and new. If they are, they're dropped.
                     cn = len(self.commited_in_buffer)
                     nn = len(self.new)
-                    for i in range(1,min(min(cn,nn),5)+1):
+                    for i in range(1,min(min(cn,nn),5)+1):  # 5 is the maximum 
                         c = " ".join([self.commited_in_buffer[-j][2] for j in range(1,i+1)][::-1])
                         tail = " ".join(self.new[j-1][2] for j in range(1,i+1))
                         if c == tail:
@@ -204,19 +204,16 @@ class OnlineASRProcessor:
 
     SAMPLING_RATE = 16000
 
-    def __init__(self, language, asr, chunk):
-        """language: lang. code
+    def __init__(self, language, asr):
+        """language: lang. code that MosesTokenizer uses for sentence segmentation
         asr: WhisperASR object
         chunk: number of seconds for intended size of audio interval that is inserted and looped
         """
         self.language = language
         self.asr = asr
-        self.tokenizer = MosesTokenizer("en")
+        self.tokenizer = MosesTokenizer(self.language)
 
         self.init()
-
-        self.chunk = chunk
-
 
     def init(self):
         """run this when starting or restarting processing"""
@@ -436,8 +433,13 @@ if __name__ == "__main__":
     parser.add_argument('--start_at', type=float, default=0.0, help='Start processing audio at this time.')
     parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped"],help='Load only this backend for Whisper processing.')
     parser.add_argument('--offline', action="store_true", default=False, help='Offline mode.')
+    parser.add_argument('--comp_unaware', action="store_true", default=False, help='Computationally unaware simulation.')
     parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
     args = parser.parse_args()
+
+    if args.offline and args.comp_unaware:
+        print("No or one option from --offline and --comp_unaware are available, not both. Exiting.",file=sys.stderr)
+        sys.exit(1)
 
     audio_path = args.audio_path
 
@@ -465,6 +467,9 @@ if __name__ == "__main__":
 
     if args.task == "translate":
         asr.set_translate_task()
+        tgt_language = "en"  # Whisper translates into English
+    else:
+        tgt_language = language  # Whisper transcribes in this language
 
 
     e = time.time()
@@ -475,7 +480,7 @@ if __name__ == "__main__":
         asr.use_vad()
 
     min_chunk = args.min_chunk_size
-    online = OnlineASRProcessor(language,asr,min_chunk)
+    online = OnlineASRProcessor(tgt_language,asr)
 
 
     # load the audio into the LRU cache before we start the timer
@@ -487,14 +492,15 @@ if __name__ == "__main__":
     beg = args.start_at
     start = time.time()-beg
 
-    def output_transcript(o):
+    def output_transcript(o, now=None):
         # output format in stdout is like:
         # 4186.3606 0 1720 Takhle to je
         # - the first three words are:
         #    - emission time from beginning of processing, in milliseconds
         #    - beg and end timestamp of the text segment, as estimated by Whisper model. The timestamps are not accurate, but they're useful anyway
         # - the next words: segment transcript
-        now = time.time()-start
+        if now is None:
+            now = time.time()-start
         if o[0] is not None:
             print("%1.4f %1.0f %1.0f %s" % (now*1000, o[0]*1000,o[1]*1000,o[2]),file=sys.stderr,flush=True)
             print("%1.4f %1.0f %1.0f %s" % (now*1000, o[0]*1000,o[1]*1000,o[2]),flush=True)
@@ -511,6 +517,28 @@ if __name__ == "__main__":
             pass
         else:
             output_transcript(o)
+        now = None
+    elif args.comp_unaware:  # computational unaware mode 
+        end = beg + min_chunk
+        while True:
+            a = load_audio_chunk(audio_path,beg,end)
+            online.insert_audio_chunk(a)
+            try:
+                o = online.process_iter()
+            except AssertionError:
+                print("assertion error",file=sys.stderr)
+                pass
+            else:
+                output_transcript(o, now=end)
+
+            print(f"## last processed {end:.2f}s",file=sys.stderr,flush=True)
+
+            beg = end
+            end += min_chunk
+            if end >= duration:
+                break
+        now = duration
+
     else: # online = simultaneous mode
         end = 0
         while True:
@@ -530,12 +558,11 @@ if __name__ == "__main__":
             else:
                 output_transcript(o)
             now = time.time() - start
-            print(f"## last processed {end:.2f} s, now is {now:.2f}, the latency is {now-end:.2f}",file=sys.stderr)
-
-            print(file=sys.stderr,flush=True)
+            print(f"## last processed {end:.2f} s, now is {now:.2f}, the latency is {now-end:.2f}",file=sys.stderr,flush=True)
 
             if end >= duration:
                 break
+        now = None
 
     o = online.finish()
-    output_transcript(o)
+    output_transcript(o, now=now)

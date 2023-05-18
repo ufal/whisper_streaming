@@ -16,7 +16,7 @@ Alternative, less restrictive, but slowe backend is [whisper-timestamped](https:
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
 
-## Usage
+## Usage: example entry point
 
 ```
 usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
@@ -49,11 +49,13 @@ options:
 
 Example:
 
+It simulates realtime processing from a pre-recorded mono 16k wav file.
+
 ```
 python3 whisper_online.py en-demo16.wav --language en --min-chunk-size 1 > out.txt
 ```
 
-## Output format
+### Output format
 
 ```
 2691.4399 300 1380 Chairman, thank you.
@@ -70,27 +72,79 @@ python3 whisper_online.py en-demo16.wav --language en --min-chunk-size 1 > out.t
 
 [See description here](https://github.com/ufal/whisper_streaming/blob/d915d790a62d7be4e7392dde1480e7981eb142ae/whisper_online.py#L361)
 
+## Usage as a module
+
+TL;DR: use OnlineASRProcessor object and its methods insert_audio_chunk and process_iter. 
+
+The code whisper_online.py is nicely commented, read it as the full documentation.
+
+
+This pseudocode describes the interface that we suggest for your implementation. You can implement e.g. audio from mic or stdin, server-client, etc.
+
+```
+from whisper_online import *
+
+src_lan = "en"  # source language
+tgt_lan = "en"  # target language  -- same as source for ASR, "en" if translate task is used
+
+
+asr = FasterWhisperASR(lan, "large-v2")  # loads and wraps Whisper model
+# set options:
+# asr.set_translate_task()  # it will translate from lan into English
+# asr.use_vad()  # set using VAD 
+
+
+online = OnlineASRProcessor(tgt_lan, asr)  # create processing object
+
+
+while audio_has_not_ended:   # processing loop:
+	a = # receive new audio chunk (and e.g. wait for min_chunk_size seconds first, ...)
+	online.insert_audio_chunk(a)
+	o = online.process_iter()
+	print(o) # do something with current partial output
+# at the end of this audio processing
+o = online.finish()
+print(o)  # do something with the last output
+
+
+online.init()  # refresh if you're going to re-use the object for the next audio
+```
+
 
 
 ## Background
 
-Default Whisper is intended for audio chunks of at most 30 seconds that contain one full sentence. Longer audio files must be split to shorter chunks and merged with "init prompt". In low latency simultaneous streaming mode, the simple and naive chunking fixed-sized windows does not work well, it can split a word in the middle. It is also necessary to know when the transcribt is stable, should be confirmed ("commited") and followed up, and when the future content makes the transcript clearer. 
+Default Whisper is intended for audio chunks of at most 30 seconds that contain
+one full sentence. Longer audio files must be split to shorter chunks and
+merged with "init prompt". In low latency simultaneous streaming mode, the
+simple and naive chunking fixed-sized windows does not work well, it can split
+a word in the middle. It is also necessary to know when the transcribt is
+stable, should be confirmed ("commited") and followed up, and when the future
+content makes the transcript clearer. 
 
-For that, there is LocalAgreement-n policy: if n consecutive updates, each with a newly available audio stream chunk, agree on a prefix transcript, it is confirmed. (Reference: CUNI-KIT at IWSLT 2022 etc.)
+For that, there is LocalAgreement-n policy: if n consecutive updates, each with
+a newly available audio stream chunk, agree on a prefix transcript, it is
+confirmed. (Reference: CUNI-KIT at IWSLT 2022 etc.)
 
-In this project, we re-use the idea of Peter Polák from this demo: https://github.com/pe-trik/transformers/blob/online_decode/examples/pytorch/online-decoding/whisper-online-demo.py However, it doesn't do any sentence segmentation, but Whisper produces punctuation and `whisper_transcribed` makes word-level timestamps. In short: we consecutively process new audio chunks, emit the transcripts that are confirmed by 2 iterations, and scroll the audio processing buffer on a timestamp of a confirmed complete sentence. The processing audio buffer is not too long and the processing is fast.
+In this project, we re-use the idea of Peter Polák from this demo:
+https://github.com/pe-trik/transformers/blob/online_decode/examples/pytorch/online-decoding/whisper-online-demo.py
+However, it doesn't do any sentence segmentation, but Whisper produces
+punctuation and the libraries `faster-whisper` and `whisper_transcribed` make
+word-level timestamps. In short: we
+consecutively process new audio chunks, emit the transcripts that are confirmed
+by 2 iterations, and scroll the audio processing buffer on a timestamp of a
+confirmed complete sentence. The processing audio buffer is not too long and
+the processing is fast.
 
-In more detail: we use the init prompt, we handle the inaccurate timestamps, we re-process confirmed sentence prefixes and skip them, making sure they don't overlap, and we limit the processing buffer window. 
+In more detail: we use the init prompt, we handle the inaccurate timestamps, we
+re-process confirmed sentence prefixes and skip them, making sure they don't
+overlap, and we limit the processing buffer window. 
 
-This project is work in progress. Contributions are welcome.
+Contributions are welcome.
 
 ### Tests
 
 Rigorous quality and latency tests are pending.
-
-Small initial debugging shows that on a fluent monologue speech without pauses, both the quality and latency of English and German ASR is impressive. 
-
-Czech ASR tests show that multi-speaker interview with pauses and disfluencies is challenging. However, parameters should be tuned.
 
 ## Contact
 
