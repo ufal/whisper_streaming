@@ -6,6 +6,7 @@ from functools import lru_cache
 import time
 from mosestokenizer import MosesTokenizer
 
+
 @lru_cache
 def load_audio(fname):
     a, _ = librosa.load(fname, sr=16000)
@@ -89,6 +90,8 @@ class FasterWhisperASR(ASRBase):
     sep = ""
 
     def load_model(self, modelsize=None, cache_dir=None, model_dir=None):
+        from faster_whisper import WhisperModel
+
 
         if model_dir is not None:
             print(f"Loading whisper model from model_dir {model_dir}. modelsize and cache_dir parameters are not used.",file=sys.stderr)
