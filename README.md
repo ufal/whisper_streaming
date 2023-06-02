@@ -110,6 +110,19 @@ print(o)  # do something with the last output
 online.init()  # refresh if you're going to re-use the object for the next audio
 ```
 
+## Usage: Server
+
+`whisper_online_server.py` entry point has the same model option sas the entry point above, plus `--host` and `--port`, and no audio path.
+
+Client example:
+
+```
+arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
+```
+
+- arecord is an example program that sends audio from a sound device, in raw audio format -- 16000 sampling rate, mono channel, S16\_LE -- signed 16-bit integer low endian
+
+- nc is netcat, server host and port are e.g. localhost 430001
 
 
 ## Background
