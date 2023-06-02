@@ -16,7 +16,9 @@ Alternative, less restrictive, but slowe backend is [whisper-timestamped](https:
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
 
-## Usage: example entry point
+## Usage
+
+### Realtime simulation from audio file
 
 ```
 usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
@@ -72,7 +74,7 @@ python3 whisper_online.py en-demo16.wav --language en --min-chunk-size 1 > out.t
 
 [See description here](https://github.com/ufal/whisper_streaming/blob/d915d790a62d7be4e7392dde1480e7981eb142ae/whisper_online.py#L361)
 
-## Usage as a module
+### As a module
 
 TL;DR: use OnlineASRProcessor object and its methods insert_audio_chunk and process_iter. 
 
@@ -110,9 +112,9 @@ print(o)  # do something with the last output
 online.init()  # refresh if you're going to re-use the object for the next audio
 ```
 
-## Usage: Server
+### Server
 
-`whisper_online_server.py` entry point has the same model option sas the entry point above, plus `--host` and `--port`, and no audio path.
+`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection.
 
 Client example:
 
@@ -120,9 +122,9 @@ Client example:
 arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 ```
 
-- arecord is an example program that sends audio from a sound device, in raw audio format -- 16000 sampling rate, mono channel, S16\_LE -- signed 16-bit integer low endian
+- arecord sends realtime audio from a sound device, in raw audio format -- 16000 sampling rate, mono channel, S16\_LE -- signed 16-bit integer low endian. (use the alternative to arecord that works for you)
 
-- nc is netcat, server host and port are e.g. localhost 430001
+- nc is netcat with server's host and port
 
 
 ## Background
