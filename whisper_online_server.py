@@ -20,9 +20,7 @@ parser.add_argument('--model_cache_dir', type=str, default=None, help="Overridin
 parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.")
 parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
 parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
-parser.add_argument('--start_at', type=float, default=0.0, help='Start processing audio at this time.')
 parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped"],help='Load only this backend for Whisper processing.')
-parser.add_argument('--offline', action="store_true", default=False, help='Offline mode.')
 parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
 args = parser.parse_args()
 
@@ -183,7 +181,12 @@ class ServerProcessor:
                 break
             self.online_asr_proc.insert_audio_chunk(a)
             o = online.process_iter()
-            self.send_result(o)
+            try:
+                self.send_result(o)
+            except BrokenPipeError:
+                print("broken pipe -- connection closed?",file=sys.stderr)
+                break
+
 #        o = online.finish()  # this should be working
 #        self.send_result(o)
 

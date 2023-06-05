@@ -12,7 +12,7 @@ pip install opus-fast-mosestokenizer
 
 The most recommended backend is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
 
-Alternative, less restrictive, but slowe backend is [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
+Alternative, less restrictive, but slower backend is [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
 
@@ -22,7 +22,7 @@ The backend is loaded only when chosen. The unused one does not have to be insta
 
 ```
 usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
-                         [--start_at START_AT] [--backend {faster-whisper,whisper_timestamped}] [--offline] [--vad]
+                         [--start_at START_AT] [--backend {faster-whisper,whisper_timestamped}] [--offline] [--comp_unaware] [--vad]
                          audio_path
 
 positional arguments:
@@ -46,7 +46,8 @@ options:
   --backend {faster-whisper,whisper_timestamped}
                         Load only this backend for Whisper processing.
   --offline             Offline mode.
-  --vad                 Use VAD = voice activity detection, with the default parameters. 
+  --comp_unaware        Computationally unaware simulation.
+  --vad                 Use VAD = voice activity detection, with the default parameters.
 ```
 
 Example:
@@ -56,6 +57,18 @@ It simulates realtime processing from a pre-recorded mono 16k wav file.
 ```
 python3 whisper_online.py en-demo16.wav --language en --min-chunk-size 1 > out.txt
 ```
+
+Simulation modes:
+
+- default mode, no special option: real-time simulation from file, computationally aware. The chunk size is `MIN_CHUNK_SIZE` or larger, if more audio arrived during last update computation.
+
+- `--comp_unaware` option: computationally unaware simulation. It means that the timer that counts the emission times "stops" when the model is computing. The chunk size is always `MIN_CHUNK_SIZE`. The latency is caused only by the model being unable to confirm the output, e.g. because of language ambiguity etc., and not because of slow hardware or suboptimal implementation. We implement this feature for finding the lower bound for latency.
+
+- `--start_at START_AT`: Start processing audio at this time. The first update receives the whole audio by `START_AT`. It is useful for debugging, e.g. when we observe a bug in a specific time in audio file, and want to reproduce it quickly, without long waiting.
+
+- `--ofline` option: It processes the whole audio file at once, in offline mode. We implement it to find out the lowest possible WER on given audio file.
+
+
 
 ### Output format
 
@@ -114,7 +127,7 @@ online.init()  # refresh if you're going to re-use the object for the next audio
 
 ### Server
 
-`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection.
+`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection. See help message (`-h` option).
 
 Client example:
 
@@ -122,7 +135,7 @@ Client example:
 arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 ```
 
-- arecord sends realtime audio from a sound device, in raw audio format -- 16000 sampling rate, mono channel, S16\_LE -- signed 16-bit integer low endian. (use the alternative to arecord that works for you)
+- arecord sends realtime audio from a sound device (e.g. mic), in raw audio format -- 16000 sampling rate, mono channel, S16\_LE -- signed 16-bit integer low endian. (use the alternative to arecord that works for you)
 
 - nc is netcat with server's host and port
 
