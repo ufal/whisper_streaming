@@ -48,6 +48,9 @@ asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, mode
 
 if args.task == "translate":
     asr.set_translate_task()
+    tgt_language = "en"
+else:
+    tgt_language = language
 
 e = time.time()
 print(f"done. It took {round(e-t,2)} seconds.",file=sys.stderr)
@@ -58,7 +61,7 @@ if args.vad:
 
 
 min_chunk = args.min_chunk_size
-online = OnlineASRProcessor(language,asr)
+online = OnlineASRProcessor(asr,create_tokenizer(tgt_language))
 
 
 
