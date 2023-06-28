@@ -1,6 +1,8 @@
 # whisper_streaming
 Whisper realtime streaming for long speech-to-text transcription and translation
 
+Demo video: https://player.vimeo.com/video/840442741
+
 ## Installation
 
 This code work with two kinds of backends. Both require
