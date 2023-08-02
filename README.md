@@ -1,6 +1,15 @@
 # whisper_streaming
 Whisper realtime streaming for long speech-to-text transcription and translation
 
+**Turning Whisper into Real-Time Transcription System**
+
+Demonstration paper, by Dominik Macháček, Raj Dabre, Ondřej Bojar, 2023
+
+Abstract:    Whisper is one of the recent state-of-the-art multilingual speech recognition and translation models, however, it is not designed for real time transcription. In this paper, we build on top of Whisper and create Whisper-Streaming, an implementation of real-time speech transcription and translation of Whisper-like models. Whisper-Streaming uses local agreement policy with self-adaptive latency to enable streaming transcription. We show that Whisper-Streaming achieves high quality and 3.3 seconds latency on unsegmented long-form speech transcription test set, and we demonstrate its robustness and practical usability as a component in live transcription service at a multilingual conference. 
+
+
+Pre-print: https://arxiv.org/abs/2307.14743
+
 Demo video: https://player.vimeo.com/video/840442741
 
 ## Installation
@@ -174,7 +183,7 @@ Contributions are welcome.
 
 ### Tests
 
-Rigorous quality and latency tests are pending.
+[See the results in paper.](https://arxiv.org/abs/2307.14743)
 
 ## Contact
 
