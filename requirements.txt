@@ -1,0 +1,2 @@
+librosa
+opus-fast-mosestokenizer
