@@ -14,18 +14,24 @@ Demo video: https://player.vimeo.com/video/840442741
 
 ## Installation
 
-This code work with two kinds of backends. Both require
+### Backend
+This project works with two baceknds:
+1. [faster-whisper](https://github.com/guillaumekln/faster-whisper): This is the recommended backend due to its speed and efficiency. Check the project's repo for installation instructions. Reqruires CUDA and CUDNN
+2. [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): This is a slower but less retrictive backend. Check the project's repo for installation instructions.
 
+### Installation
+After installing a backend and checking it's working properly, you can install this package as follows:
+#### 1. Clone this repo
 ```
-pip install librosa
-pip install opus-fast-mosestokenizer
+git clone https://github.com/ufal/whisper_streaming.git
 ```
-
-The most recommended backend is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
-
-Alternative, less restrictive, but slower backend is [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
-
-The backend is loaded only when chosen. The unused one does not have to be installed.
+#### 2. Install dependencies
+```
+pip install -r requirements.txt
+```
+This will install the following libraries:
+1. `librosa`: For handling audio files
+2. `opus-fast-mosestokenizer`: This is used for handling sentences (splitting, joining, etc)
 
 ## Usage
 
