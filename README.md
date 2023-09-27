@@ -14,18 +14,29 @@ Demo video: https://player.vimeo.com/video/840442741
 
 ## Installation
 
-This code work with two kinds of backends. Both require
+1) ``pip install librosa`` -- audio processing library
 
-```
-pip install librosa
-pip install opus-fast-mosestokenizer
-```
+2) Whisper backend.
 
-The most recommended backend is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
+Two alternative backends are integrated. The most recommended one is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
 
 Alternative, less restrictive, but slower backend is [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
+
+3) Sentence segmenter (aka sentence tokenizer) 
+
+It splits punctuated text to sentences by full stops, avoiding the dots that are not full stops. The segmenters are language specific.
+The unused one does not have to be installed. We integrate the following segmenters, but suggestions for better alternatives are welcome.
+
+- `pip install opus-fast-mosestokenizer` for the languages with codes `as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh`
+
+- `pip install tokenize_uk` for Ukrainian -- `uk`
+
+- for other languages, we integrate a good performing multi-lingual model of `wtpslit`. It requires `pip install torch wtpsplit`, and its neural model `wtp-canine-s-12l-no-adapters`. It is downloaded to the default huggingface cache during the first use. 
+
+- we did not find a segmenter for languages `as ba bo br bs fo haw hr ht jw lb ln lo mi nn oc sa sd sn so su sw tk tl tt` that are supported by Whisper and not by wtpsplit. The default fallback option for them is wtpsplit with unspecified language. Alternative suggestions welcome.
+
 
 ## Usage
 
