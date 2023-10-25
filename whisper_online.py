@@ -103,7 +103,7 @@ class FasterWhisperASR(ASRBase):
 
 
         # this worked fast and reliably on NVIDIA L40
-        model = WhisperModel(model_size_or_path, device="cuda", compute_type="float16", download_root=cache_dir)
+        #model = WhisperModel(model_size_or_path, device="cuda", compute_type="float16", download_root=cache_dir)
 
         # or run on GPU with INT8
         # tested: the transcripts were different, probably worse than with FP16, and it was slightly (appx 20%) slower
@@ -111,7 +111,7 @@ class FasterWhisperASR(ASRBase):
 
         # or run on CPU with INT8
         # tested: works, but slow, appx 10-times than cuda FP16
-#        model = WhisperModel(modelsize, device="cpu", compute_type="int8") #, download_root="faster-disk-cache-dir/")
+        model = WhisperModel(modelsize, device="cpu", compute_type="int8") #, download_root="faster-disk-cache-dir/")
         return model
 
     def transcribe(self, audio, init_prompt=""):
@@ -373,7 +373,7 @@ class OnlineASRProcessor:
         
         cwords = [w for w in words]
         t = " ".join(o[2] for o in cwords)
-        s = self.tokenizer.split(t)
+        s = self.tokenizer(t) # removed .split() method as 'MosesSentenceSplitter' object has no attribute 'split'
         out = []
         while s:
             beg = None
@@ -430,10 +430,10 @@ def create_tokenizer(lan):
                 return tokenize_uk.tokenize_sents(text)
         return UkrainianTokenizer()
 
-    # supported by fast-mosestokenizer
+    # supported by mosestokenizer (1.2.1)
     if lan in "as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh".split():
-        from mosestokenizer import MosesTokenizer
-        return MosesTokenizer(lan)
+        from mosestokenizer import MosesSentenceSplitter
+        return MosesSentenceSplitter(lan)
 
     # the following languages are in Whisper, but not in wtpsplit:
     if lan in "as ba bo br bs fo haw hr ht jw lb ln lo mi nn oc sa sd sn so su sw tk tl tt".split():
