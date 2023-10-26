@@ -30,8 +30,8 @@ It splits punctuated text to sentences by full stops, avoiding the dots that are
 The unused one does not have to be installed. We integrate the following segmenters, but suggestions for better alternatives are welcome.
 
 - for the languages with codes `as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh`
-- - Apple Silicon: `mosestokenizer` 
-- - Otherwise: `pip install opus-fast-mosestokenizer` 
+- - Linux/Windows/Mac Intel: `pip install opus-fast-mosestokenizer` 
+- - Apple Silicon (M1/M2): `pip install mosestokenizer` 
 
 - `pip install tokenize_uk` for Ukrainian -- `uk`
 
