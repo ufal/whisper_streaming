@@ -12,6 +12,8 @@ Pre-print: https://arxiv.org/abs/2307.14743
 
 Demo video: https://player.vimeo.com/video/840442741
 
+[Slides](http://ufallab.ms.mff.cuni.cz/~machacek/pre-prints/AACL23-2.11.2023-Turning-Whisper-oral.pdf) -- 15 minutes oral presentation at IJCNLP-AACL 2023
+
 ## Installation
 
 1) ``pip install librosa`` -- audio processing library
