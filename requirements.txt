@@ -1,0 +1,8 @@
+numpy
+librosa
+faster-whisper
+tokenize_uk
+mosestokenizer
+wtpsplit
+openai-whisper
+git+https://github.com/linto-ai/whisper-timestamped
