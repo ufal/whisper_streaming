@@ -42,7 +42,7 @@ The unused one does not have to be installed. We integrate the following segment
 
 ## Usage
 
-### Realtime simulation from audio file
+### Real-time simulation from audio file
 
 ```
 usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
@@ -149,7 +149,7 @@ print(o)  # do something with the last output
 online.init()  # refresh if you're going to re-use the object for the next audio
 ```
 
-### Server
+### Server -- real-time from mic
 
 `whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection. See help message (`-h` option).
 
