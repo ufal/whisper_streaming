@@ -126,14 +126,14 @@ from whisper_online import *
 src_lan = "en"  # source language
 tgt_lan = "en"  # target language  -- same as source for ASR, "en" if translate task is used
 
-
 asr = FasterWhisperASR(lan, "large-v2")  # loads and wraps Whisper model
 # set options:
 # asr.set_translate_task()  # it will translate from lan into English
-# asr.use_vad()  # set using VAD 
+# asr.use_vad()  # set using VAD
 
+tokenizer = create_tokenizer(tgt_lan)  # sentence segmenter for the target language
 
-online = OnlineASRProcessor(tgt_lan, asr)  # create processing object
+online = OnlineASRProcessor(asr, tokenizer)  # create processing object
 
 
 while audio_has_not_ended:   # processing loop:
