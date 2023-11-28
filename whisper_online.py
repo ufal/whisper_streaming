@@ -389,6 +389,7 @@ class OnlineASRProcessor:
             fsent = sent
             while cwords:
                 b,e,w = cwords.pop(0)
+                w = w.strip()
                 if beg is None and sent.startswith(w):
                     beg = b
                 elif end is None and sent == w:
