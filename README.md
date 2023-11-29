@@ -8,11 +8,26 @@ Demonstration paper, by Dominik Macháček, Raj Dabre, Ondřej Bojar, 2023
 Abstract:    Whisper is one of the recent state-of-the-art multilingual speech recognition and translation models, however, it is not designed for real time transcription. In this paper, we build on top of Whisper and create Whisper-Streaming, an implementation of real-time speech transcription and translation of Whisper-like models. Whisper-Streaming uses local agreement policy with self-adaptive latency to enable streaming transcription. We show that Whisper-Streaming achieves high quality and 3.3 seconds latency on unsegmented long-form speech transcription test set, and we demonstrate its robustness and practical usability as a component in live transcription service at a multilingual conference. 
 
 
-Pre-print: https://arxiv.org/abs/2307.14743
+Paper in proceedings: http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf
 
 Demo video: https://player.vimeo.com/video/840442741
 
 [Slides](http://ufallab.ms.mff.cuni.cz/~machacek/pre-prints/AACL23-2.11.2023-Turning-Whisper-oral.pdf) -- 15 minutes oral presentation at IJCNLP-AACL 2023
+
+Please, cite us. [Bibtex citation](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/bib/2023.ijcnlp-demo.3.bib):
+
+```
+@InProceedings{machacek-dabre-bojar:2023:ijcnlp,
+  author    = {Macháček, Dominik  and  Dabre, Raj  and  Bojar, Ondřej},
+  title     = {Turning Whisper into Real-Time Transcription System},
+  booktitle      = {System Demonstrations},
+  month          = {November},
+  year           = {2023},
+  address        = {Bali, Indonesia},
+  publisher      = {Asian Federation of Natural Language Processing},
+  pages     = {17--24},
+}
+```
 
 ## Installation
 
