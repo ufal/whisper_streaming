@@ -211,7 +211,7 @@ Contributions are welcome.
 
 ### Tests
 
-[See the results in paper.](https://arxiv.org/abs/2307.14743)
+[See the results in paper.](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf)
 
 ## Contact
 
