@@ -11,7 +11,6 @@ class VoiceActivityController:
             sampling_rate = 16000,
             second_ofSilence = 0.5,
             second_ofSpeech = 0.25,
-            second_ofMinRecording = 10,
             use_vad_result = True,
             activity_detected_callback=None,
         ):
@@ -29,13 +28,12 @@ class VoiceActivityController:
         self.sampling_rate = sampling_rate  
         self.silence_limit = second_ofSilence * self.sampling_rate 
         self.speech_limit = second_ofSpeech *self.sampling_rate 
-        self.MIN_RECORDING_LENGTH =  second_ofMinRecording * self.sampling_rate 
 
         self.use_vad_result = use_vad_result
         self.vad_iterator = VADIterator(
             model =self.model,
-            threshold = 0.3,
-            sampling_rate= 16000,
+            threshold = 0.3, # 0.5
+            sampling_rate= self.sampling_rate,
             min_silence_duration_ms = 500, #100
             speech_pad_ms = 400 #30
         )
