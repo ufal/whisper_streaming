@@ -13,7 +13,7 @@ model = "large-v2"
 src_lan = "en"  # source language
 tgt_lan = "en"  # target language  -- same as source for ASR, "en" if translate task is used
 use_vad_result = True
-min_sample_length = 1 * SAMPLING_RATE
+min_sample_length = 1.5 * SAMPLING_RATE
 
 
 

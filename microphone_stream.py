@@ -29,7 +29,7 @@ class MicrophoneStream:
         self._pyaudio = pyaudio.PyAudio()
         self.sample_rate = sample_rate
 
-        self._chunk_size = int(self.sample_rate * 0.1)
+        self._chunk_size = int(self.sample_rate * 40  / 1000)
         self._stream = self._pyaudio.open(
             format=pyaudio.paInt16,
             channels=1,

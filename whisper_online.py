@@ -4,7 +4,7 @@ import numpy as np
 import librosa  
 from functools import lru_cache
 import time
-
+import datetime
 
 
 @lru_cache
@@ -118,14 +118,21 @@ class FasterWhisperASR(ASRBase):
         return model
 
     def transcribe(self, audio, init_prompt=""):
+
+        # tiempo_inicio = datetime.datetime.now()
         # tested: beam_size=5 is faster and better than 1 (on one 200 second document from En ESIC, min chunk 0.01)
         segments, info = self.model.transcribe(audio, language=self.original_language, initial_prompt=init_prompt, beam_size=5, word_timestamps=True, condition_on_previous_text=True, **self.transcribe_kargs)
+        
+        # print(f'({datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")})----------r> whisper transcribe  take { (datetime.datetime.now() -tiempo_inicio)  } ms.')
+
         return list(segments)
 
     def ts_words(self, segments):
         o = []
         for segment in segments:
             for word in segment.words:
+                if segment.no_speech_prob > 0.9:
+                    continue
                 # not stripping the spaces -- should not be merged with them!
                 w = word.word
                 t = (word.start, word.end, w)

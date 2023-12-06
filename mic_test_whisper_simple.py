@@ -39,7 +39,6 @@ class SimpleASRProcessor:
             if chunk is not None:
                 sf = soundfile.SoundFile(io.BytesIO(chunk), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
                 audio, _ = librosa.load(sf,sr=SAMPLING_RATE)
-                # self.audio_buffer.append(chunk)
                 out = []
                 out.append(audio)
                 a = np.concatenate(out)
@@ -47,15 +46,16 @@ class SimpleASRProcessor:
 
             if is_final and len(self.audio_buffer) > 0:
                 res = self.asr.transcribe(self.audio_buffer, init_prompt=self.init_prompt)
-                # use custom ts_words
                 tsw = self.ts_words(res)
+                
                 self.init_prompt = self.init_prompt + tsw
                 self.init_prompt  = self.init_prompt [-100:]
                 self.audio_buffer.resize(0)
                 iter_in_phrase =0
+                
                 yield True, tsw
-            # show progress evry 10 chunks
-            elif iter_in_phrase % 20 == 0 and len(self.audio_buffer) > 0:
+            # show progress evry 50 chunks
+            elif iter_in_phrase % 50 == 0 and len(self.audio_buffer) > 0:
                 res = self.asr.transcribe(self.audio_buffer, init_prompt=self.init_prompt)
                 # use custom ts_words
                 tsw = self.ts_words(res)
