@@ -30,11 +30,11 @@ class VoiceActivityController:
             repo_or_dir='snakers4/silero-vad',
             model='silero_vad'
         )
-        (self.get_speech_timestamps,
-        save_audio,
-        read_audio,
-        VADIterator,
-        collect_chunks) = self.utils
+        # (self.get_speech_timestamps,
+        # save_audio,
+        # read_audio,
+        # VADIterator,
+        # collect_chunks) = self.utils
 
         self.sampling_rate = sampling_rate  
         self.final_silence_limit = min_silence_to_final_ms * self.sampling_rate / 1000 
