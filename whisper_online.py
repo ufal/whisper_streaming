@@ -573,10 +573,15 @@ if __name__ == "__main__":
 
             print(f"## last processed {end:.2f}s",file=logfile,flush=True)
 
-            beg = end
-            end += min_chunk
             if end >= duration:
                 break
+            
+            beg = end
+            
+            if end + min_chunk > duration:
+                end = duration
+            else:
+                end += min_chunk
         now = duration
 
     else: # online = simultaneous mode
