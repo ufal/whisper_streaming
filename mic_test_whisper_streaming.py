@@ -13,7 +13,7 @@ model = "large-v2"
 src_lan = "en"  # source language
 tgt_lan = "en"  # target language  -- same as source for ASR, "en" if translate task is used
 use_vad_result = True
-min_sample_length = 1.5 * SAMPLING_RATE
+min_sample_length = 1 * SAMPLING_RATE
 
 
 
@@ -54,12 +54,12 @@ for iter in vad.detect_user_speech(microphone_stream):   # processing loop:
 
     if is_final:
         o = online.finish()
-        online.init()   
         # final_processing_pending = False         
         print('-----'*10)
         complete_text = complete_text + o[2]
         print('FINAL - '+ complete_text) # do something with current partial output
         print('-----'*10)   
+        online.init()   
         out = []
         out_len = 0    
         

@@ -76,7 +76,7 @@ class VoiceActivityController:
             if self.current_sample - self.temp_end < self.min_silence_samples:
                 return audio, 0, window_size_samples
             else:
-                return np.array([], dtype=np.float16) , 0, window_size_samples
+                return np.array([], dtype=np.float16) if self.use_vad_result else audio, 0, window_size_samples
 
 
 

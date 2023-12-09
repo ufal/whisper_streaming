@@ -72,12 +72,12 @@ SAMPLING_RATE = 16000
 model = "large-v2"
 src_lan = "en"  # source language
 tgt_lan = "en"  # target language  -- same as source for ASR, "en" if translate task is used
-use_vad_result = True
+use_vad = False
 min_sample_length = 1 * SAMPLING_RATE
 
 
 
-vad = VoiceActivityController(use_vad_result = use_vad_result)
+vac = VoiceActivityController(use_vad_result = use_vad)
 asr = FasterWhisperASR(src_lan, "large-v2")  # loads and wraps Whisper model
 
 tokenizer = create_tokenizer(tgt_lan)
@@ -85,7 +85,7 @@ online = SimpleASRProcessor(asr)
 
 
 stream = MicrophoneStream()
-stream = vad.detect_user_speech(stream, audio_in_int16 = False) 
+stream = vac.detect_user_speech(stream, audio_in_int16 = False) 
 stream = online.stream_process(stream)
 
 for isFinal, text in stream:
