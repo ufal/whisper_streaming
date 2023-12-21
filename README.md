@@ -46,7 +46,10 @@ The backend is loaded only when chosen. The unused one does not have to be insta
 It splits punctuated text to sentences by full stops, avoiding the dots that are not full stops. The segmenters are language specific.
 The unused one does not have to be installed. We integrate the following segmenters, but suggestions for better alternatives are welcome.
 
-- `pip install opus-fast-mosestokenizer` for the languages with codes `as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh`
+- for the languages with codes `as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh`
+  `pip install opus-fast-mosestokenizer` if supported.
+  **or**
+  `pip install mosestokenizer` if your system does not support it, e.g. on Apple Silicon (M1/M2).
 
 - `pip install tokenize_uk` for Ukrainian -- `uk`
 

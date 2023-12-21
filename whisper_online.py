@@ -441,7 +441,20 @@ def create_tokenizer(lan):
     # supported by fast-mosestokenizer
     if lan in "as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh".split():
         from mosestokenizer import MosesTokenizer
-        return MosesTokenizer(lan)
+        # use MosesTokenizer if it has a `split` function
+        if "split" in dir(MosesTokenizer):
+            return MosesTokenizer(lan)
+
+        # fallback splitter for platforms that don't have MosesTokenizer.split such as Apple Silicon
+        class Splitter:
+            def __init__(self):
+                from mosestokenizer import MosesSentenceSplitter
+                self.splitter = MosesSentenceSplitter(lan)
+
+            def split(self, text):
+                return self.splitter(text)
+
+        return Splitter()
 
     # the following languages are in Whisper, but not in wtpsplit:
     if lan in "as ba bo br bs fo haw hr ht jw lb ln lo mi nn oc sa sd sn so su sw tk tl tt".split():
