@@ -452,7 +452,7 @@ def create_tokenizer(lan):
                 self.splitter = MosesSentenceSplitter(lan)
 
             def split(self, text):
-                return self.splitter(text)
+                return self.splitter([text])
 
         return Splitter()
 
