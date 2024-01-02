@@ -41,10 +41,17 @@ Alternative, less restrictive, but slower backend is [whisper-timestamped](https
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
 
-3) Sentence segmenter (aka sentence tokenizer) 
+3) Optional, not recommended: sentence segmenter (aka sentence tokenizer) 
 
-It splits punctuated text to sentences by full stops, avoiding the dots that are not full stops. The segmenters are language specific.
-The unused one does not have to be installed. We integrate the following segmenters, but suggestions for better alternatives are welcome.
+Two buffer trimming options are integrated and evaluated. They have impact on
+the quality and latency. The default "segment" option performs better according
+to our tests and does not require any sentence segmentation installed. 
+
+The other option, "sentence" -- trimming at the end of confirmed sentences,
+requires sentence segmenter installed.  It splits punctuated text to sentences by full
+stops, avoiding the dots that are not full stops. The segmenters are language
+specific.  The unused one does not have to be installed. We integrate the
+following segmenters, but suggestions for better alternatives are welcome.
 
 - `pip install opus-fast-mosestokenizer` for the languages with codes `as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh`
 
@@ -54,14 +61,16 @@ The unused one does not have to be installed. We integrate the following segment
 
 - we did not find a segmenter for languages `as ba bo br bs fo haw hr ht jw lb ln lo mi nn oc sa sd sn so su sw tk tl tt` that are supported by Whisper and not by wtpsplit. The default fallback option for them is wtpsplit with unspecified language. Alternative suggestions welcome.
 
+In case of installation issues of opus-fast-mosestokenizer, especially on Windows and Mac, we recommend using only the "segment" option that does not require it.
 
 ## Usage
 
 ### Real-time simulation from audio file
 
 ```
-usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
-                         [--start_at START_AT] [--backend {faster-whisper,whisper_timestamped}] [--offline] [--comp_unaware] [--vad]
+usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}] [--model_cache_dir MODEL_CACHE_DIR]
+                         [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}] [--start_at START_AT] [--backend {faster-whisper,whisper_timestamped}] [--vad]
+                         [--buffer_trimming {sentence,segment}] [--buffer_trimming_sec BUFFER_TRIMMING_SEC] [--offline] [--comp_unaware]
                          audio_path
 
 positional arguments:
@@ -70,8 +79,9 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --min-chunk-size MIN_CHUNK_SIZE
-                        Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received by this time.
-  --model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large}
+                        Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was
+                        received by this time.
+  --model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}
                         Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.
   --model_cache_dir MODEL_CACHE_DIR
                         Overriding the default model cache dir where models downloaded from the hub are saved
@@ -84,9 +94,14 @@ options:
   --start_at START_AT   Start processing audio at this time.
   --backend {faster-whisper,whisper_timestamped}
                         Load only this backend for Whisper processing.
+  --vad                 Use VAD = voice activity detection, with the default parameters.
+  --buffer_trimming {sentence,segment}
+                        Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter
+                        must be installed for "sentence" option.
+  --buffer_trimming_sec BUFFER_TRIMMING_SEC
+                        Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered.
   --offline             Offline mode.
   --comp_unaware        Computationally unaware simulation.
-  --vad                 Use VAD = voice activity detection, with the default parameters.
 ```
 
 Example:
@@ -133,7 +148,7 @@ TL;DR: use OnlineASRProcessor object and its methods insert_audio_chunk and proc
 The code whisper_online.py is nicely commented, read it as the full documentation.
 
 
-This pseudocode describes the interface that we suggest for your implementation. You can implement e.g. audio from mic or stdin, server-client, etc.
+This pseudocode describes the interface that we suggest for your implementation. You can implement any features that you need for your application.
 
 ```
 from whisper_online import *
@@ -146,10 +161,7 @@ asr = FasterWhisperASR(lan, "large-v2")  # loads and wraps Whisper model
 # asr.set_translate_task()  # it will translate from lan into English
 # asr.use_vad()  # set using VAD
 
-tokenizer = create_tokenizer(tgt_lan)  # sentence segmenter for the target language
-
-online = OnlineASRProcessor(asr, tokenizer)  # create processing object
-
+online = OnlineASRProcessor(asr)  # create processing object with default buffer trimming option
 
 while audio_has_not_ended:   # processing loop:
 	a = # receive new audio chunk (and e.g. wait for min_chunk_size seconds first, ...)
@@ -209,9 +221,10 @@ overlap, and we limit the processing buffer window.
 
 Contributions are welcome.
 
-### Tests
+### Performance evaluation
 
-[See the results in paper.](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf)
+[See the paper.](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf)
+
 
 ## Contact
 
