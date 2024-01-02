@@ -212,7 +212,7 @@ class OnlineASRProcessor:
 
     SAMPLING_RATE = 16000
 
-    def __init__(self, asr, tokenizer, logfile=sys.stderr):
+    def __init__(self, asr, tokenizer=None, logfile=sys.stderr, buffer_trimming=("segment", 15)):
         """asr: WhisperASR object
         tokenizer: sentence tokenizer object for the target language. Must have a method *split* that behaves like the one of MosesTokenizer.
         logfile: where to store the log. 
@@ -222,6 +222,8 @@ class OnlineASRProcessor:
         self.logfile = logfile
 
         self.init()
+
+        self.buffer_trimming_way, self.buffer_trimming_sec = buffer_trimming
 
     def init(self):
         """run this when starting or restarting processing"""
@@ -278,36 +280,18 @@ class OnlineASRProcessor:
         print("INCOMPLETE:",self.to_flush(self.transcript_buffer.complete()),file=self.logfile,flush=True)
 
         # there is a newly confirmed text
-        if o:
-            # we trim all the completed sentences from the audio buffer
-            self.chunk_completed_sentence()
 
-            # ...segments could be considered
-            #self.chunk_completed_segment(res)
+        if o and self.buffer_trimming_way == "sentence":  # trim the completed sentences
+            if len(self.audio_buffer)/self.SAMPLING_RATE > self.buffer_trimming_sec:  # longer than this
+                self.chunk_completed_sentence()
 
-            # 
-#            self.silence_iters = 0
-
-         # this was an attempt to trim silence/non-linguistic noise detected by the fact that Whisper doesn't transcribe anything for 3-times in a row.
-         # It seemed not working better, or needs to be debugged.
-
-#        elif self.transcript_buffer.complete():
-#            self.silence_iters = 0
-#        elif not self.transcript_buffer.complete():
-#        #    print("NOT COMPLETE:",to_flush(self.transcript_buffer.complete()),file=self.logfile,flush=True)
-#            self.silence_iters += 1
-#            if self.silence_iters >= 3:
-#                n = self.last_chunked_at
-##                self.chunk_completed_sentence()
-##                if n == self.last_chunked_at:
-#                self.chunk_at(self.last_chunked_at+self.chunk)
-#                print(f"\tCHUNK: 3-times silence! chunk_at {n}+{self.chunk}",file=self.logfile)
-##                self.silence_iters = 0
-
-
-        # if the audio buffer is longer than 30s, trim it...
-        if len(self.audio_buffer)/self.SAMPLING_RATE > 30:
-            # ...on the last completed segment (labeled by Whisper)
+        
+        if self.buffer_trimming_way == "segment":
+            s = self.buffer_trimming_sec  # trim the completed segments longer than s,
+        else:
+            s = 30 # if the audio buffer is longer than 30s, trim it
+        
+        if len(self.audio_buffer)/self.SAMPLING_RATE > s:
             self.chunk_completed_segment(res)
 
             # alternative: on any word
@@ -317,7 +301,7 @@ class OnlineASRProcessor:
             #while k>0 and self.commited[k][1] > l:
             #    k -= 1
             #t = self.commited[k][1] 
-            print(f"chunking because of len",file=self.logfile)
+            print(f"chunking segment",file=self.logfile)
             #self.chunk_at(t)
 
         print(f"len of buffer now: {len(self.audio_buffer)/self.SAMPLING_RATE:2.2f}",file=self.logfile)
@@ -477,6 +461,8 @@ if __name__ == "__main__":
     parser.add_argument('--offline', action="store_true", default=False, help='Offline mode.')
     parser.add_argument('--comp_unaware', action="store_true", default=False, help='Computationally unaware simulation.')
     parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
+    parser.add_argument('--buffer_trimming', type=str, default="sentence", choices=["sentence", "segment"],help='Buffer trimming strategy')
+    parser.add_argument('--buffer_trimming_sec', type=float, default=15, help='Buffer trimming lenght threshold in seconds. If buffer length longer, trimming sentence/segment is triggered.')
     args = parser.parse_args()
 
     # reset to store stderr to different file stream, e.g. open(os.devnull,"w")
@@ -521,7 +507,7 @@ if __name__ == "__main__":
 
     
     min_chunk = args.min_chunk_size
-    online = OnlineASRProcessor(asr,create_tokenizer(tgt_language),logfile=logfile)
+    online = OnlineASRProcessor(asr,create_tokenizer(tgt_language),logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
 
     # load the audio into the LRU cache before we start the timer
