@@ -355,7 +355,7 @@ class OnlineASRProcessor:
         """
         self.transcript_buffer.pop_commited(time)
         cut_seconds = time - self.buffer_time_offset
-        self.audio_buffer = self.audio_buffer[int(cut_seconds)*self.SAMPLING_RATE:]
+        self.audio_buffer = self.audio_buffer[int(cut_seconds*self.SAMPLING_RATE):]
         self.buffer_time_offset = time
         self.last_chunked_at = time
 
