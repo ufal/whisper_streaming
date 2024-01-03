@@ -51,8 +51,12 @@ class VoiceActivityController:
         self.temp_end = 0
         self.current_sample = 0
 
+        self.last_silence_len= 0
+        self.speech_len = 0
+
     def apply_vad(self, audio):
-        x = int2float(audio)
+#        x = int2float(audio)
+        x = audio
         if not torch.is_tensor(x):
             try:
                 x = torch.Tensor(x)
@@ -79,38 +83,42 @@ class VoiceActivityController:
                 return np.array([], dtype=np.float16) if self.use_vad_result else audio, 0, window_size_samples
 
 
+    def detect_speech_iter(self, data, audio_in_int16 = False):
+#        audio_block = np.frombuffer(data, dtype=np.int16) if not audio_in_int16 else data
+        audio_block = data
+        wav = audio_block
+
+        print(wav, len(wav), type(wav), wav.dtype)
+        
+        is_final = False
+        voice_audio, speech_in_wav, last_silent_in_wav = self.apply_vad(wav)
+
+
+        if speech_in_wav > 0 :
+            self.last_silence_len= 0                
+            self.speech_len += speech_in_wav
+#            if self.activity_detected_callback is not None:
+#                self.activity_detected_callback()
+
+        self.last_silence_len +=  last_silent_in_wav
+        if self.last_silence_len>= self.final_silence_limit and self.speech_len >= self.final_speech_limit:
+
+            is_final = True
+            self.last_silence_len= 0
+            self.speech_len = 0                
+
+#        return voice_audio.tobytes(), is_final
+        return voice_audio, is_final
 
 
 
     def detect_user_speech(self, audio_stream, audio_in_int16 = False):
-        last_silence_len= 0
-        speech_len = 0
+        self.last_silence_len= 0
+        self.speech_len = 0
 
         for data in audio_stream:  # replace with your condition of choice
-            
-            
-            audio_block = np.frombuffer(data, dtype=np.int16) if not audio_in_int16 else data
-            wav = audio_block
-            
-            is_final = False
-            voice_audio, speech_in_wav, last_silent_in_wav = self.apply_vad(wav)
-
-
-            if speech_in_wav > 0 :
-                last_silence_len= 0                
-                speech_len += speech_in_wav
-                if self.activity_detected_callback is not None:
-                    self.activity_detected_callback()
-
-            last_silence_len +=  last_silent_in_wav
-            if last_silence_len>= self.final_silence_limit and speech_len >= self.final_speech_limit:
-
-                is_final = True
-                last_silence_len= 0
-                speech_len = 0                
-
-            yield voice_audio.tobytes(), is_final
-
+            yield self.detect_speech_iter(data, audio_in_int16)
+           
 
 
 
