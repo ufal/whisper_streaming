@@ -328,7 +328,6 @@ class OnlineASRProcessor:
 
         self.transcript_buffer = HypothesisBuffer(logfile=self.logfile)
         self.commited = []
-        self.last_chunked_at = 0
 
         self.silence_iters = 0
 
@@ -340,7 +339,7 @@ class OnlineASRProcessor:
         "context" is the commited text that is inside the audio buffer. It is transcribed again and skipped. It is returned only for debugging and logging reasons.
         """
         k = max(0,len(self.commited)-1)
-        while k > 0 and self.commited[k-1][1] > self.last_chunked_at:
+        while k > 0 and self.commited[k-1][1] > self.buffer_time_offset:
             k -= 1
 
         p = self.commited[:k]
@@ -451,7 +450,6 @@ class OnlineASRProcessor:
         cut_seconds = time - self.buffer_time_offset
         self.audio_buffer = self.audio_buffer[int(cut_seconds*self.SAMPLING_RATE):]
         self.buffer_time_offset = time
-        self.last_chunked_at = time
 
     def words_to_sentences(self, words):
         """Uses self.tokenizer for sentence segmentation of words.
