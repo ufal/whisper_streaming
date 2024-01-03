@@ -9,7 +9,8 @@ parser = argparse.ArgumentParser()
 # server options
 parser.add_argument("--host", type=str, default='localhost')
 parser.add_argument("--port", type=int, default=43007)
-
+parser.add_argument('--vac', action="store_true", default=False, help='Use VAC = voice activity controller.')
+parser.add_argument('--vac-chunk-size', type=float, default=0.04, help='VAC sample size in seconds.')
 
 # options from whisper_online
 add_shared_args(parser)
@@ -57,8 +58,11 @@ if args.buffer_trimming == "sentence":
     tokenizer = create_tokenizer(tgt_language)
 else:
     tokenizer = None
-online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
-
+if not args.vac:
+    online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+else:
+    from whisper_online_vac import *
+    online = VACOnlineASRProcessor(min_chunk, asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
 
 demo_audio_path = "cs-maji-2.16k.wav"

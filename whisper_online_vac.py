@@ -7,52 +7,46 @@ SAMPLING_RATE = 16000
 
 class VACOnlineASRProcessor(OnlineASRProcessor):
 
-    def __init__(self, *a, **kw):
-        self.online = OnlineASRProcessor(*a, **kw)
-        self.vac = VoiceActivityController(use_vad_result = True)
+    def __init__(self, online_chunk_size, *a, **kw):
+        self.online_chunk_size = online_chunk_size
 
-        self.is_currently_final = False
+        self.online = OnlineASRProcessor(*a, **kw)
+        self.vac = VoiceActivityController(use_vad_result = False)
+
         self.logfile = self.online.logfile
 
-        #self.vac_buffer = io.BytesIO()
-        #self.vac_stream = self.vac.detect_user_speech(self.vac_buffer, audio_in_int16=False)
-
-        self.audio_log = open("audio_log.wav","wb")
+        self.init()
 
     def init(self):
         self.online.init()
         self.vac.reset_states()
+        self.current_online_chunk_buffer_size = 0
+        self.is_currently_final = False
+
 
     def insert_audio_chunk(self, audio):
-        print(audio, len(audio), type(audio), audio.dtype)
         r = self.vac.detect_speech_iter(audio,audio_in_int16=False)
-        raw_bytes, is_final = r
-        print("is_final",is_final)
-        print("raw_bytes", raw_bytes[:10], len(raw_bytes), type(raw_bytes))
-#        self.audio_log.write(raw_bytes)
-        #sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
-        #audio, _ = librosa.load(sf,sr=SAMPLING_RATE)
-        audio = raw_bytes
-        print("po překonvertování", audio, len(audio), type(audio), audio.dtype)
+        audio, is_final = r
+        print(is_final)
         self.is_currently_final = is_final
         self.online.insert_audio_chunk(audio)
-#        self.audio_log.write(audio)
-        self.audio_log.flush()
-
-        print("inserted",file=self.logfile)
+        self.current_online_chunk_buffer_size += len(audio)
 
     def process_iter(self):
         if self.is_currently_final:
             return self.finish()
-        else:
-            print(self.online.audio_buffer)
+        elif self.current_online_chunk_buffer_size > SAMPLING_RATE*self.online_chunk_size:
+            self.current_online_chunk_buffer_size = 0
             ret = self.online.process_iter()
-            print("tady",file=self.logfile)
             return ret
+        else:
+            print("no online update, only VAD", file=self.logfile)
+            return (None, None, "")
 
     def finish(self):
         ret = self.online.finish()
         self.online.init()
+        self.current_online_chunk_buffer_size = 0
         return ret
 
 
@@ -67,7 +61,7 @@ if __name__ == "__main__":
     parser.add_argument('--start_at', type=float, default=0.0, help='Start processing audio at this time.')
     parser.add_argument('--offline', action="store_true", default=False, help='Offline mode.')
     parser.add_argument('--comp_unaware', action="store_true", default=False, help='Computationally unaware simulation.')
-    
+    parser.add_argument('--vac-chunk-size', type=float, default=0.04, help='VAC sample size in seconds.') 
     args = parser.parse_args()
 
     # reset to store stderr to different file stream, e.g. open(os.devnull,"w")
@@ -111,12 +105,12 @@ if __name__ == "__main__":
         asr.use_vad()
 
     
-    min_chunk = args.min_chunk_size
+    min_chunk = args.vac_chunk_size
     if args.buffer_trimming == "sentence":
         tokenizer = create_tokenizer(tgt_language)
     else:
         tokenizer = None
-    online = VACOnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+    online = VACOnlineASRProcessor(args.min_chunk_size, asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
 
     # load the audio into the LRU cache before we start the timer
