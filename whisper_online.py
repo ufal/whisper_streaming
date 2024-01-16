@@ -208,7 +208,17 @@ class HypothesisBuffer:
     def complete(self):
         return self.buffer
 
-class OnlineASRProcessor:
+class OnlineASRProcessorBase:
+    def init(self):
+        raise NotImplemented()
+    def insert_audio_chunk(self, audio):
+        raise NotImplemented()
+    def process_iter(self):
+        raise NotImplemented()
+    def finish(self):
+        raise NotImplemented()
+
+class OnlineASRProcessor(OnlineASRProcessorBase):
 
     SAMPLING_RATE = 16000
 
@@ -410,6 +420,7 @@ class OnlineASRProcessor:
             e = offset + sents[-1][1]
         return (b,e,t)
 
+
 WHISPER_LANG_CODES = "af,am,ar,as,az,ba,be,bg,bn,bo,br,bs,ca,cs,cy,da,de,el,en,es,et,eu,fa,fi,fo,fr,gl,gu,ha,haw,he,hi,hr,ht,hu,hy,id,is,it,ja,jw,ka,kk,km,kn,ko,la,lb,ln,lo,lt,lv,mg,mi,mk,ml,mn,mr,ms,mt,my,ne,nl,nn,no,oc,pa,pl,ps,pt,ro,ru,sa,sd,si,sk,sl,sn,so,sq,sr,su,sv,sw,ta,te,tg,th,tk,tl,tr,tt,uk,ur,uz,vi,yi,yo,zh".split(",")
 
 def create_tokenizer(lan):
@@ -453,7 +464,7 @@ def add_shared_args(parser):
     parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.")
     parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
     parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
-    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped"],help='Load only this backend for Whisper processing.')
+    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped", "seamless"],help='Load only this backend for Whisper processing, or SeamlessM4T Streaming backend.')
     parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
     parser.add_argument('--buffer_trimming', type=str, default="segment", choices=["sentence", "segment"],help='Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter must be installed for "sentence" option.')
     parser.add_argument('--buffer_trimming_sec', type=float, default=15, help='Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered.')
@@ -488,44 +499,49 @@ if __name__ == "__main__":
     size = args.model
     language = args.lan
 
-    t = time.time()
-    print(f"Loading Whisper {size} model for {language}...",file=logfile,end=" ",flush=True)
-
-    if args.backend == "faster-whisper":
-        asr_cls = FasterWhisperASR
-    else:
-        asr_cls = WhisperTimestampedASR
-
-    asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
-
-    if args.task == "translate":
-        asr.set_translate_task()
-        tgt_language = "en"  # Whisper translates into English
-    else:
-        tgt_language = language  # Whisper transcribes in this language
-
-
-    e = time.time()
-    print(f"done. It took {round(e-t,2)} seconds.",file=logfile)
-
-    if args.vad:
-        print("setting VAD filter",file=logfile)
-        asr.use_vad()
-
-    
     min_chunk = args.min_chunk_size
-    if args.buffer_trimming == "sentence":
-        tokenizer = create_tokenizer(tgt_language)
+    
+    if args.backend != "seamless":
+        # loading Whisper model
+        t = time.time()
+        print(f"Loading Whisper {size} model for {language}...",file=logfile,end=" ",flush=True)
+
+        if args.backend == "faster-whisper":
+            asr_cls = FasterWhisperASR
+        elif args.backend == "whisper_timestamped":
+            asr_cls = WhisperTimestampedASR
+
+        asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
+
+        e = time.time()
+        print(f"done. It took {round(e-t,2)} seconds.",file=logfile)
+
+        if args.vad:
+            print("setting VAD filter",file=logfile)
+            asr.use_vad()
+        if args.task == "translate":
+            asr.set_translate_task()
+            tgt_language = "en"  # Whisper translates into English
+        else:
+            tgt_language = language  # Whisper transcribes in this language
+
+        if args.buffer_trimming == "sentence":
+            tokenizer = create_tokenizer(tgt_language)
+        else:
+            tokenizer = None
+
+        online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+        # load the audio into the LRU cache before we start the timer
+        a = load_audio_chunk(audio_path,0,1)
+
+        # warm up the ASR, because the very first transcribe takes much more time than the other
+        asr.transcribe(a)
+
     else:
-        tokenizer = None
-    online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+        print(f"Loading SeamlessM4T Streaming backend model",file=logfile,flush=True)
 
-
-    # load the audio into the LRU cache before we start the timer
-    a = load_audio_chunk(audio_path,0,1)
-
-    # warm up the ASR, because the very first transcribe takes much more time than the other
-    asr.transcribe(a)
+        from seamless_integration import SeamlessProcessor
+        online = SeamlessProcessor(language, logfile=logfile)
 
     beg = args.start_at
     start = time.time()-beg
