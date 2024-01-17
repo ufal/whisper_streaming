@@ -20,60 +20,60 @@ args = parser.parse_args()
 
 SAMPLING_RATE = 16000
 
-size = args.model
 language = args.lan
-
-t = time.time()
-print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",flush=True)
-
-if args.backend == "faster-whisper":
-    from faster_whisper import WhisperModel
-    asr_cls = FasterWhisperASR
-else:
-    import whisper
-    import whisper_timestamped
-#    from whisper_timestamped_model import WhisperTimestampedASR
-    asr_cls = WhisperTimestampedASR
-
-asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
-
-if args.task == "translate":
-    asr.set_translate_task()
-    tgt_language = "en"
-else:
-    tgt_language = language
-
-e = time.time()
-print(f"done. It took {round(e-t,2)} seconds.",file=sys.stderr)
-
-if args.vad:
-    print("setting VAD filter",file=sys.stderr)
-    asr.use_vad()
-
-
 min_chunk = args.min_chunk_size
 
-if args.buffer_trimming == "sentence":
-    tokenizer = create_tokenizer(tgt_language)
-else:
-    tokenizer = None
-online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+if args.backend != "seamless":  # loading Whisper backend
+    size = args.model
 
+    t = time.time()
+    print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",flush=True)
 
+    if args.backend == "faster-whisper":
+        from faster_whisper import WhisperModel
+        asr_cls = FasterWhisperASR
+    else:
+        import whisper
+        import whisper_timestamped
+    #    from whisper_timestamped_model import WhisperTimestampedASR
+        asr_cls = WhisperTimestampedASR
 
-demo_audio_path = "cs-maji-2.16k.wav"
-if os.path.exists(demo_audio_path):
-    # load the audio into the LRU cache before we start the timer
-    a = load_audio_chunk(demo_audio_path,0,1)
+    asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
 
-    # TODO: it should be tested whether it's meaningful
-    # warm up the ASR, because the very first transcribe takes much more time than the other
-    asr.transcribe(a)
-else:
-    print("Whisper is not warmed up",file=sys.stderr)
+    if args.task == "translate":
+        asr.set_translate_task()
+        tgt_language = "en"
+    else:
+        tgt_language = language
 
+    e = time.time()
+    print(f"done. It took {round(e-t,2)} seconds.",file=sys.stderr)
 
+    if args.vad:
+        print("setting VAD filter",file=sys.stderr)
+        asr.use_vad()
 
+    demo_audio_path = "cs-maji-2.16k.wav"
+    if os.path.exists(demo_audio_path):
+        # load the audio into the LRU cache before we start the timer
+        a = load_audio_chunk(demo_audio_path,0,1)
+
+        # TODO: it should be tested whether it's meaningful
+        # warm up the ASR, because the very first transcribe takes much more time than the other
+        asr.transcribe(a)
+    else:
+        print("Whisper is not warmed up",file=sys.stderr)
+
+    if args.buffer_trimming == "sentence":
+        tokenizer = create_tokenizer(tgt_language)
+    else:
+        tokenizer = None
+    online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+else:  # seamless backend:
+    print(f"Loading Seamless Streaming backend model",file=sys.stderr,flush=True)
+
+    from seamless_integration import SeamlessProcessor
+    online = SeamlessProcessor(language, args.task, logfile=sys.stderr)
 
 ######### Server objects
 

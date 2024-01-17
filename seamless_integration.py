@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import sys
 import numpy as np
 
@@ -9,12 +8,10 @@ from simuleval.data.segments import SpeechSegment, EmptySegment
 from simuleval.utils.arguments import cli_argument_list
 from simuleval import options
 
-
 from typing import Union, List
 from simuleval.data.segments import Segment, TextSegment
 from simuleval.agents.pipeline import TreeAgentPipeline
 from simuleval.agents.states import AgentStates
-
 
 SAMPLE_RATE = 16000
 
@@ -26,7 +23,6 @@ def reset_states(system, states):
     for state in states_iter:
         state.reset()
 
-
 def get_states_root(system, states) -> AgentStates:
     if isinstance(system, TreeAgentPipeline):
         # self.states is a dict
@@ -34,7 +30,6 @@ def get_states_root(system, states) -> AgentStates:
     else:
         # self.states is a list
         return system.states[0]
-
 
 def build_streaming_system(model_configs, agent_class):
     parser = options.general_parser()
@@ -76,7 +71,7 @@ from seamless_communication.streaming.agents.silero_vad import SileroVADAgent
 from seamless_communication.streaming.agents.unity_pipeline import UnitYAgentPipeline
 class FixDetokenizerAgent(DetokenizerAgent):
     def decode(self, x: str) -> str:
-        return x.replace(" ", "").replace("\u2581", " ")
+        return x.replace(" ", "").replace("\u2581", " ")  # .strip() is removed
 
 class FixSeamlessStreamingS2TVADAgent(UnitYAgentPipeline):
     pipeline = [
@@ -88,9 +83,28 @@ class FixSeamlessStreamingS2TVADAgent(UnitYAgentPipeline):
     ]
 ##################################
 
-#class SeamlessProcessor(OnlineASRProcessorBase):  # TODO: there should be a common base class
+# the next pieces of are copypasted from the tutorial and put to the corresponding methods
+
+#class SeamlessProcessor(OnlineASRProcessorBase):  # TODO: there should be a common base class. But the code would not be simple anymore.
 class SeamlessProcessor:
-    def __init__(self, tgt_lan, logfile=sys.stderr):
+    '''
+    Wrapping SeamlessStreaming for the same operation modes as
+    Whisper-Streaming's OnlineASRProcessor. 
+
+    '''
+    def __init__(self, tgt_lan, task, logfile=sys.stderr):
+        '''
+        tgt_lan:    must be 3-letter language code that Seamless-Streaming supports for text output mode.
+        task:   see below
+        logfile
+        '''
+        if task in ("transcribe","asr"):
+            task_arg = "asr"
+        elif task in ("translate","s2tt"):
+            task_arg = "s2tt"
+        else:
+            raise ValueError("task argument must be 'transcribe' or 'translate', or 'asr' or 's2tt'")
+
         self.logfile = logfile
 
         agent_class = FixSeamlessStreamingS2TVADAgent
@@ -105,7 +119,7 @@ class SeamlessProcessor:
             no_early_stop=True,
             max_len_a=0,
             max_len_b=100,
-            task="s2tt",
+            task=task_arg,
             tgt_lang=tgt_lan,
             block_ngrams=True,
             detokenize_only=True,
@@ -143,11 +157,11 @@ class SeamlessProcessor:
         return (None, None, "")
 
 
-    def process_iter(self):
+    def process_iter(self, finished=False):
         input_segment = SpeechSegment(
                 content=self.audio_buffer,
                 sample_rate=SAMPLE_RATE,
-                finished=False,
+                finished=finished,
         )
         self.audio_buffer = np.array([],dtype=np.float32)
         input_segment.tgt_lang = self.tgt_lan
@@ -155,7 +169,4 @@ class SeamlessProcessor:
         return self.process_segment(input_segment)
 
     def finish(self):
-        segment = EmptySegment(
-                finished=True,
-            )
-        return self.process_segment(segment)
+        return self.process_iter(finished=True)

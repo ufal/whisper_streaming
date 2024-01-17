@@ -209,6 +209,7 @@ class HypothesisBuffer:
         return self.buffer
 
 class OnlineASRProcessorBase:
+    '''Showing minimum common public interface for various specialized subclasses.'''
     def init(self):
         raise NotImplemented()
     def insert_audio_chunk(self, audio):
@@ -458,16 +459,16 @@ def add_shared_args(parser):
     """shared args for simulation (this entry point) and server
     parser: argparse.ArgumentParser object
     """
-    parser.add_argument('--min-chunk-size', type=float, default=1.0, help='Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received by this time.')
-    parser.add_argument('--model', type=str, default='large-v2', choices="tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large".split(","),help="Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.")
-    parser.add_argument('--model_cache_dir', type=str, default=None, help="Overriding the default model cache dir where models downloaded from the hub are saved")
-    parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.")
-    parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
+    parser.add_argument('--min-chunk-size', type=float, default=1.0, help='Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received by this time. Applicable both to Whisper and seamless.')
+    parser.add_argument('--model', type=str, default='large-v2', choices="tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large".split(","),help="Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir. Not applicable to seamless.")
+    parser.add_argument('--model_cache_dir', type=str, default=None, help="Overriding the default model cache dir where models downloaded from the hub are saved. Not applicable to seamless.")
+    parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter. Not applicable to seamless.")
+    parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs. Seamless backend has its own 3-letter language codes, e.g. eng, deu, ces.")
     parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
-    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped", "seamless"],help='Load only this backend for Whisper processing, or SeamlessM4T Streaming backend.')
-    parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
-    parser.add_argument('--buffer_trimming', type=str, default="segment", choices=["sentence", "segment"],help='Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter must be installed for "sentence" option.')
-    parser.add_argument('--buffer_trimming_sec', type=float, default=15, help='Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered.')
+    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped", "seamless"],help='Load only this backend for Whisper processing, or Seamless Streaming.')
+    parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters. Not applicable to seamless.')
+    parser.add_argument('--buffer_trimming', type=str, default="segment", choices=["sentence", "segment"],help='Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter must be installed for "sentence" option. Not applicable to seamless.')
+    parser.add_argument('--buffer_trimming_sec', type=float, default=15, help='Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered. Not applicable to seamless.')
 
 ## main:
 
@@ -538,10 +539,10 @@ if __name__ == "__main__":
         asr.transcribe(a)
 
     else:
-        print(f"Loading SeamlessM4T Streaming backend model",file=logfile,flush=True)
+        print(f"Loading Seamless Streaming backend model",file=logfile,flush=True)
 
         from seamless_integration import SeamlessProcessor
-        online = SeamlessProcessor(language, logfile=logfile)
+        online = SeamlessProcessor(language, args.task, logfile=logfile)
 
     beg = args.start_at
     start = time.time()-beg

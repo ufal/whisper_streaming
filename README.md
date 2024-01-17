@@ -33,7 +33,7 @@ Please, cite us. [Bibtex citation](http://www.afnlp.org/conferences/ijcnlp2023/p
 
 1) ``pip install librosa`` -- audio processing library
 
-2) Whisper backend.
+2) **Whisper backend**.
 
 Two alternative backends are integrated. The most recommended one is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
 
@@ -41,9 +41,16 @@ Alternative, less restrictive, but slower backend is [whisper-timestamped](https
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
 
+Or: **Seamless Streaming** -- alternative to Whisper-Streaming, wrapped to enable the same operation modes and input/output format as Whisper-Streaming. 
+
+`pip install fairseq2 pydub sentencepiece git+https://github.com/facebookresearch/seamless_communication.git`
+
+Installation suggested [here](https://github.com/facebookresearch/seamless_communication/blob/main/Seamless_Tutorial.ipynb), for special torch version cases refer to [fairseq2](https://github.com/facebookresearch/fairseq2#variants). 
+
+
 3) Optional, not recommended: sentence segmenter (aka sentence tokenizer) 
 
-Two buffer trimming options are integrated and evaluated. They have impact on
+Two buffer trimming options are integrated and evaluated for Whisper backends. They have impact on
 the quality and latency. The default "segment" option performs better according
 to our tests and does not require any sentence segmentation installed. 
 
@@ -68,8 +75,9 @@ In case of installation issues of opus-fast-mosestokenizer, especially on Window
 ### Real-time simulation from audio file
 
 ```
-usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
-                         [--backend {faster-whisper,whisper_timestamped}] [--vad] [--buffer_trimming {sentence,segment}] [--buffer_trimming_sec BUFFER_TRIMMING_SEC] [--start_at START_AT] [--offline] [--comp_unaware]
+usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}] [--model_cache_dir MODEL_CACHE_DIR]
+                         [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}] [--backend {faster-whisper,whisper_timestamped,seamless}] [--vad] [--buffer_trimming {sentence,segment}]
+                         [--buffer_trimming_sec BUFFER_TRIMMING_SEC] [--start_at START_AT] [--offline] [--comp_unaware]
                          audio_path
 
 positional arguments:
@@ -78,24 +86,26 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --min-chunk-size MIN_CHUNK_SIZE
-                        Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received by this time.
+                        Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received
+                        by this time. Applicable both to Whisper and seamless.
   --model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}
-                        Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.
+                        Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir. Not applicable to seamless.
   --model_cache_dir MODEL_CACHE_DIR
-                        Overriding the default model cache dir where models downloaded from the hub are saved
+                        Overriding the default model cache dir where models downloaded from the hub are saved. Not applicable to seamless.
   --model_dir MODEL_DIR
-                        Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.
+                        Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter. Not applicable to seamless.
   --lan LAN, --language LAN
-                        Language code for transcription, e.g. en,de,cs.
+                        Language code for transcription, e.g. en,de,cs. Seamless backend has its own 3-letter language codes, e.g. eng, deu, ces.
   --task {transcribe,translate}
                         Transcribe or translate.
-  --backend {faster-whisper,whisper_timestamped}
-                        Load only this backend for Whisper processing.
-  --vad                 Use VAD = voice activity detection, with the default parameters.
+  --backend {faster-whisper,whisper_timestamped,seamless}
+                        Load only this backend for Whisper processing, or Seamless Streaming.
+  --vad                 Use VAD = voice activity detection, with the default parameters. Not applicable to seamless.
   --buffer_trimming {sentence,segment}
-                        Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter must be installed for "sentence" option.
+                        Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter
+                        must be installed for "sentence" option. Not applicable to seamless.
   --buffer_trimming_sec BUFFER_TRIMMING_SEC
-                        Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered.
+                        Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered. Not applicable to seamless.
   --start_at START_AT   Start processing audio at this time.
   --offline             Offline mode.
   --comp_unaware        Computationally unaware simulation.
