@@ -41,7 +41,7 @@ Alternative, less restrictive, but slower backend is [whisper-timestamped](https
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
 
-Or: **Seamless Streaming** -- alternative to Whisper-Streaming, wrapped to enable the same operation modes and input/output format as Whisper-Streaming. 
+Or: **Seamless Streaming** -- alternative to Whisper, wrapped to enable the same operation modes and input/output format. 
 
 `pip install fairseq2 pydub sentencepiece git+https://github.com/facebookresearch/seamless_communication.git`
 
