@@ -4,6 +4,8 @@ import numpy as np
 import librosa  
 from functools import lru_cache
 import time
+import io
+import soundfile as sf
 
 
 
@@ -141,6 +143,76 @@ class FasterWhisperASR(ASRBase):
     def set_translate_task(self):
         self.transcribe_kargs["task"] = "translate"
 
+
+class OpenaiApiASR(ASRBase):
+    """Uses OpenAI's Whisper API for audio transcription."""
+
+    def __init__(self, modelsize=None, lan=None, cache_dir=None, model_dir=None, response_format="verbose_json", temperature=0):
+        self.modelname = "whisper-1"  # modelsize is not used but kept for interface consistency
+        self.language = lan  # ISO-639-1 language code
+        self.response_format = response_format
+        self.temperature = temperature
+        self.model = self.load_model(modelsize, cache_dir, model_dir)
+
+    def load_model(self, *args, **kwargs):
+        from openai import OpenAI
+        self.client = OpenAI()
+        # Since we're using the OpenAI API, there's no model to load locally.
+        print("Model configuration is set to use the OpenAI Whisper API.")
+
+    def ts_words(self, segments):
+        o = []
+        for segment in segments:
+            # Skip segments containing no speech
+            if segment["no_speech_prob"] > 0.8:
+                continue
+
+            # Splitting the text into words and filtering out empty strings
+            words = [word.strip() for word in segment["text"].split() if word.strip()]
+
+            if not words:
+                continue
+
+            # Assign start and end times for each word
+            # We only have timestamps per segment, so interpolating start and end-times
+            # assuming equal duration per word
+            segment_duration = segment["end"] - segment["start"]
+            duration_per_word = segment_duration / len(words)
+            start_time = segment["start"]
+            for word in words:
+                end_time = start_time + duration_per_word
+                o.append((start_time, end_time, word))
+                start_time = end_time
+
+        return o
+
+
+    def segments_end_ts(self, res):
+        return [s["end"] for s in res]
+
+    def transcribe(self, audio_data, prompt=None, *args, **kwargs):
+        # Write the audio data to a buffer
+        buffer = io.BytesIO()
+        buffer.name = "temp.wav"
+        sf.write(buffer, audio_data, samplerate=16000, format='WAV', subtype='PCM_16')
+        buffer.seek(0)  # Reset buffer's position to the beginning
+
+        # Prepare transcription parameters
+        transcription_params = {
+            "model": self.modelname,
+            "file": buffer,
+            "response_format": self.response_format,
+            "temperature": self.temperature
+        }
+        if self.language:
+            transcription_params["language"] = self.language
+        if prompt:
+            transcription_params["prompt"] = prompt
+
+        # Perform the transcription
+        transcript = self.client.audio.transcriptions.create(**transcription_params)
+
+        return transcript.segments
 
 
 class HypothesisBuffer:
@@ -453,7 +525,7 @@ def add_shared_args(parser):
     parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.")
     parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
     parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
-    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped"],help='Load only this backend for Whisper processing.')
+    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped", "openai-api"],help='Load only this backend for Whisper processing.')
     parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
     parser.add_argument('--buffer_trimming', type=str, default="segment", choices=["sentence", "segment"],help='Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter must be installed for "sentence" option.')
     parser.add_argument('--buffer_trimming_sec', type=float, default=15, help='Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered.')
@@ -493,6 +565,8 @@ if __name__ == "__main__":
 
     if args.backend == "faster-whisper":
         asr_cls = FasterWhisperASR
+    elif args.backend == "openai-api":
+        asr_cls = OpenaiApiASR
     else:
         asr_cls = WhisperTimestampedASR
 

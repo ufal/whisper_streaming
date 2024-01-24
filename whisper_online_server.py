@@ -29,6 +29,8 @@ print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",
 if args.backend == "faster-whisper":
     from faster_whisper import WhisperModel
     asr_cls = FasterWhisperASR
+elif args.backend == "openai-api":
+    asr_cls = OpenaiApiASR
 else:
     import whisper
     import whisper_timestamped
