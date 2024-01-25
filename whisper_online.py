@@ -215,9 +215,9 @@ class OpenaiApiASR(ASRBase):
             "temperature": self.temperature
         }
         if self.task != "translate" and self.language:
-            transcription_params["language"] = self.language
+            params["language"] = self.language
         if prompt:
-            transcription_params["prompt"] = prompt
+            params["prompt"] = prompt
 
         if self.task == "translate":
             proc = self.client.audio.translations
@@ -227,7 +227,7 @@ class OpenaiApiASR(ASRBase):
         # Process transcription/translation
 
         transcript = proc.create(**params)
-        print(f"OpenAI API processed accumulated {self.transcribed_seconds} seconds ",file=self.logfile)
+        print(f"OpenAI API processed accumulated {self.transcribed_seconds} seconds",file=self.logfile)
 
         return transcript.segments
 
