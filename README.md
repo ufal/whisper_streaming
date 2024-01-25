@@ -31,13 +31,18 @@ Please, cite us. [Bibtex citation](http://www.afnlp.org/conferences/ijcnlp2023/p
 
 ## Installation
 
-1) ``pip install librosa`` -- audio processing library
+1) ``pip install librosa soundfile`` -- audio processing library
 
 2) Whisper backend.
 
-Two alternative backends are integrated. The most recommended one is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
+ Several alternative backends are integrated. The most recommended one is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
 
 Alternative, less restrictive, but slower backend is [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
+
+Thirdly, it's also possible to run this software from the [OpenAI Whisper API](https://platform.openai.com/docs/api-reference/audio/createTranscription). This solution is fast and requires no GPU, just a small VM will suffice, but you will need to pay OpenAI for api access. Also note that, since each audio fragment is processed multiple times, the [price](https://openai.com/pricing) will be higher than obvious from the pricing page, so keep an eye on costs while using. Setting a higher chunk-size will reduce costs significantly. 
+Install with: `pip install openai`
+
+For running with the openai-api backend, make sure that your [OpenAI api key](https://platform.openai.com/api-keys) is set in the `OPENAI_API_KEY` environment variable. For example, before running, do: `export OPENAI_API_KEY=sk-xxx` with *sk-xxx* replaced with your api key. 
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
 
@@ -69,7 +74,7 @@ In case of installation issues of opus-fast-mosestokenizer, especially on Window
 
 ```
 usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
-                         [--backend {faster-whisper,whisper_timestamped}] [--vad] [--buffer_trimming {sentence,segment}] [--buffer_trimming_sec BUFFER_TRIMMING_SEC] [--start_at START_AT] [--offline] [--comp_unaware]
+                         [--backend {faster-whisper,whisper_timestamped,openai-api}] [--vad] [--buffer_trimming {sentence,segment}] [--buffer_trimming_sec BUFFER_TRIMMING_SEC] [--start_at START_AT] [--offline] [--comp_unaware]
                          audio_path
 
 positional arguments:
@@ -89,7 +94,7 @@ options:
                         Source language code, e.g. en,de,cs, or 'auto' for language detection.
   --task {transcribe,translate}
                         Transcribe or translate.
-  --backend {faster-whisper,whisper_timestamped}
+  --backend {faster-whisper,whisper_timestamped,openai-api}
                         Load only this backend for Whisper processing.
   --vad                 Use VAD = voice activity detection, with the default parameters.
   --buffer_trimming {sentence,segment}
