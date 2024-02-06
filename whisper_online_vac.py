@@ -45,7 +45,7 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
 
     def finish(self):
         ret = self.online.finish()
-        self.online.init()
+        self.online.init(keep_offset=True)
         self.current_online_chunk_buffer_size = 0
         return ret
 

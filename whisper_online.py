@@ -235,16 +235,19 @@ class OnlineASRProcessor:
 
         self.buffer_trimming_way, self.buffer_trimming_sec = buffer_trimming
 
-    def init(self):
+    def init(self, keep_offset=False):
         """run this when starting or restarting processing"""
         self.audio_buffer = np.array([],dtype=np.float32)
-        self.buffer_time_offset = 0
-
         self.transcript_buffer = HypothesisBuffer(logfile=self.logfile)
+        if not keep_offset:
+            self.buffer_time_offset = 0
+            self.transcript_buffer.last_commited_time = 0
+        else:
+            self.transcript_buffer.last_commited_time = self.buffer_time_offset
+
         self.commited = []
         self.last_chunked_at = 0
 
-        self.silence_iters = 0
 
     def insert_audio_chunk(self, audio):
         self.audio_buffer = np.append(self.audio_buffer, audio)
@@ -400,6 +403,7 @@ class OnlineASRProcessor:
         o = self.transcript_buffer.complete()
         f = self.to_flush(o)
         print("last, noncommited:",f,file=self.logfile)
+        self.buffer_time_offset += len(self.audio_buffer)/16000
         return f
 
 
