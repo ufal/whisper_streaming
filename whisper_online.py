@@ -30,7 +30,10 @@ class ASRBase:
         self.logfile = logfile
 
         self.transcribe_kargs = {}
-        self.original_language = lan 
+        if lan == "auto":
+            self.original_language = None
+        else:
+            self.original_language = lan
 
         self.model = self.load_model(modelsize, cache_dir, model_dir)
 
@@ -118,8 +121,11 @@ class FasterWhisperASR(ASRBase):
         return model
 
     def transcribe(self, audio, init_prompt=""):
+
         # tested: beam_size=5 is faster and better than 1 (on one 200 second document from En ESIC, min chunk 0.01)
         segments, info = self.model.transcribe(audio, language=self.original_language, initial_prompt=init_prompt, beam_size=5, word_timestamps=True, condition_on_previous_text=True, **self.transcribe_kargs)
+        #print(info)  # info contains language detection result
+
         return list(segments)
 
     def ts_words(self, segments):
@@ -451,7 +457,7 @@ def add_shared_args(parser):
     parser.add_argument('--model', type=str, default='large-v2', choices="tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large".split(","),help="Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.")
     parser.add_argument('--model_cache_dir', type=str, default=None, help="Overriding the default model cache dir where models downloaded from the hub are saved")
     parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.")
-    parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
+    parser.add_argument('--lan', '--language', type=str, default='en', help="Source language code, e.g. en,de,cs, or 'auto' for language detection.")
     parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
     parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped"],help='Load only this backend for Whisper processing.')
     parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
