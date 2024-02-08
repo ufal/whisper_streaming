@@ -190,12 +190,14 @@ class OpenaiApiASR(ASRBase):
 
             # Assign start and end times for each word
             # We only have timestamps per segment, so interpolating start and end-times
-            # assuming equal duration per word
+
+            
             segment_duration = segment["end"] - segment["start"]
-            duration_per_word = segment_duration / len(words)
+            total_characters = sum(len(word) for word in words)
+            duration_per_character = segment_duration / total_characters
             start_time = segment["start"]
             for word in words:
-                end_time = start_time + duration_per_word
+                end_time = start_time + duration_per_character * len(word)
                 o.append((start_time, end_time, word))
                 start_time = end_time
 
