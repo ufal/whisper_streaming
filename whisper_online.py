@@ -176,30 +176,14 @@ class OpenaiApiASR(ASRBase):
 
     def ts_words(self, segments):
         o = []
-        for segment in segments:
-            # If VAD on, skip segments containing no speech. 
-            # TODO: threshold can be set from outside
-            if self.use_vad and segment["no_speech_prob"] > 0.8:
-                continue
+        # If VAD on, skip segments containing no speech. 
+        # TODO: threshold can be set from outside
+        # TODO: Make VAD work again with word-level timestamps
+        #if self.use_vad and segment["no_speech_prob"] > 0.8:
+        #    continue
 
-            # Splitting the text into words and filtering out empty strings
-            words = [word.strip() for word in segment["text"].split() if word.strip()]
-
-            if not words:
-                continue
-
-            # Assign start and end times for each word
-            # We only have timestamps per segment, so interpolating start and end-times
-
-            
-            segment_duration = segment["end"] - segment["start"]
-            total_characters = sum(len(word) for word in words)
-            duration_per_character = segment_duration / total_characters
-            start_time = segment["start"]
-            for word in words:
-                end_time = start_time + duration_per_character * len(word)
-                o.append((start_time, end_time, word))
-                start_time = end_time
+        for word in segments:
+            o.append((word.get("start"), word.get("end"), word.get("word")))
 
         return o
 
@@ -220,7 +204,8 @@ class OpenaiApiASR(ASRBase):
             "model": self.modelname,
             "file": buffer,
             "response_format": self.response_format,
-            "temperature": self.temperature
+            "temperature": self.temperature,
+            "timestamp_granularities": ["word"]
         }
         if self.task != "translate" and self.language:
             params["language"] = self.language
@@ -233,11 +218,10 @@ class OpenaiApiASR(ASRBase):
             proc = self.client.audio.transcriptions
 
         # Process transcription/translation
-
         transcript = proc.create(**params)
         print(f"OpenAI API processed accumulated {self.transcribed_seconds} seconds",file=self.logfile)
 
-        return transcript.segments
+        return transcript.words
 
     def use_vad(self):
         self.use_vad = True
