@@ -6,6 +6,10 @@ authors = ["Dominik Macháček <machacek@ufal.mff.cuni.cz>"]
 license = "MIT"
 readme = "README.md"
 
+[tool.poetry.scripts]
+whisper_online = "whisper_streaming.whisper_online:main"
+whisper_online_server = "whisper_streaming.whisper_online_server:main"
+
 [tool.poetry.dependencies]
 # Python 3.12 is not supported by "av", see https://github.com/PyAV-Org/PyAV/issues/1140
 python = "3.11.*"

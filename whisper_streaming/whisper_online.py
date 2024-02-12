@@ -466,8 +466,8 @@ def add_shared_args(parser):
 
 ## main:
 
-if __name__ == "__main__":
 
+def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('audio_path', type=str, help="Filename of 16kHz mono channel wav, on which live streaming is simulated.")
@@ -615,3 +615,7 @@ if __name__ == "__main__":
 
     o = online.finish()
     output_transcript(o, now=now)
+
+
+if __name__ == "__main__":
+    main()

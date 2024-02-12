@@ -212,3 +212,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         conn.close()
         logging.info('INFO: Connection to client closed')
 logging.info('INFO: Connection closed, terminating.')
+
+
+def main():
+    """Dummy function at the very end of this file as script target"""
+    pass
