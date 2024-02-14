@@ -15,10 +15,11 @@ whisper_online_server = "whisper_streaming.whisper_online_server:main"
 python = "3.11.*"
 librosa = "~0.10.1"
 faster-whisper = "~0.10.0"
-# whisper-timestamped = { version = "^1.14.4", optional = "true" }
+openai-whisper = { version = "*", optional = true }
+whisper-timestamped = { version = "^1.14.4", optional = true }
 
 [tool.poetry.extras]
-timestamped = ["whisper-timestamped"]
+timestamped = ["openai-whisper", "whisper-timestamped"]
 
 [build-system]
 requires = ["poetry-core"]
