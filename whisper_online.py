@@ -152,12 +152,12 @@ class FasterWhisperASR(ASRBase):
 class OpenaiApiASR(ASRBase):
     """Uses OpenAI's Whisper API for audio transcription."""
 
-    def __init__(self, lan=None, response_format="verbose_json", temperature=0, logfile=sys.stderr):
+    def __init__(self, lan=None, temperature=0, logfile=sys.stderr):
         self.logfile = logfile
 
         self.modelname = "whisper-1"  
-        self.language = lan  # ISO-639-1 language code
-        self.response_format = response_format
+        self.original_language = None if lan == "auto" else lan # ISO-639-1 language code
+        self.response_format = "verbose_json" 
         self.temperature = temperature
 
         self.load_model()
@@ -213,8 +213,8 @@ class OpenaiApiASR(ASRBase):
             "temperature": self.temperature,
             "timestamp_granularities": ["word", "segment"]
         }
-        if self.task != "translate" and self.language:
-            params["language"] = self.language
+        if self.task != "translate" and self.original_language:
+            params["language"] = self.original_language
         if prompt:
             params["prompt"] = prompt
 
