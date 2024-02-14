@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "whisper-streaming"
+name = "whisper_streaming"
 version = "0.1.0"
 description = "Whisper realtime streaming for long speech-to-text transcription and translation"
 authors = ["Dominik Macháček <machacek@ufal.mff.cuni.cz>"]
