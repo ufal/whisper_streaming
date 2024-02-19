@@ -91,7 +91,7 @@ options:
   --model_dir MODEL_DIR
                         Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.
   --lan LAN, --language LAN
-                        Language code for transcription, e.g. en,de,cs.
+                        Source language code, e.g. en,de,cs, or 'auto' for language detection.
   --task {transcribe,translate}
                         Transcribe or translate.
   --backend {faster-whisper,whisper_timestamped,openai-api}

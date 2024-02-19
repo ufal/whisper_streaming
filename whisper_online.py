@@ -31,7 +31,10 @@ class ASRBase:
         self.logfile = logfile
 
         self.transcribe_kargs = {}
-        self.original_language = lan 
+        if lan == "auto":
+            self.original_language = None
+        else:
+            self.original_language = lan
 
         self.model = self.load_model(modelsize, cache_dir, model_dir)
 
@@ -119,8 +122,11 @@ class FasterWhisperASR(ASRBase):
         return model
 
     def transcribe(self, audio, init_prompt=""):
+
         # tested: beam_size=5 is faster and better than 1 (on one 200 second document from En ESIC, min chunk 0.01)
         segments, info = self.model.transcribe(audio, language=self.original_language, initial_prompt=init_prompt, beam_size=5, word_timestamps=True, condition_on_previous_text=True, **self.transcribe_kargs)
+        #print(info)  # info contains language detection result
+
         return list(segments)
 
     def ts_words(self, segments):
@@ -146,17 +152,17 @@ class FasterWhisperASR(ASRBase):
 class OpenaiApiASR(ASRBase):
     """Uses OpenAI's Whisper API for audio transcription."""
 
-    def __init__(self, lan=None, response_format="verbose_json", temperature=0, logfile=sys.stderr):
+    def __init__(self, lan=None, temperature=0, logfile=sys.stderr):
         self.logfile = logfile
 
         self.modelname = "whisper-1"  
-        self.language = lan  # ISO-639-1 language code
-        self.response_format = response_format
+        self.original_language = None if lan == "auto" else lan # ISO-639-1 language code
+        self.response_format = "verbose_json" 
         self.temperature = temperature
 
         self.load_model()
 
-        self.use_vad = False
+        self.use_vad_opt = False
 
         # reset the task in set_translate_task
         self.task = "transcribe"
@@ -169,35 +175,26 @@ class OpenaiApiASR(ASRBase):
         
 
     def ts_words(self, segments):
+        no_speech_segments = []
+        if self.use_vad_opt:
+            for segment in segments.segments:
+                # TODO: threshold can be set from outside
+                if segment["no_speech_prob"] > 0.8:
+                    no_speech_segments.append((segment.get("start"), segment.get("end")))
+
         o = []
-        for segment in segments:
-            # If VAD on, skip segments containing no speech. 
-            # TODO: threshold can be set from outside
-            if self.use_vad and segment["no_speech_prob"] > 0.8:
+        for word in segments.words:
+            start = word.get("start")
+            end = word.get("end")
+            if any(s[0] <= start <= s[1] for s in no_speech_segments):
+                # print("Skipping word", word.get("word"), "because it's in a no-speech segment")
                 continue
-
-            # Splitting the text into words and filtering out empty strings
-            words = [word.strip() for word in segment["text"].split() if word.strip()]
-
-            if not words:
-                continue
-
-            # Assign start and end times for each word
-            # We only have timestamps per segment, so interpolating start and end-times
-            # assuming equal duration per word
-            segment_duration = segment["end"] - segment["start"]
-            duration_per_word = segment_duration / len(words)
-            start_time = segment["start"]
-            for word in words:
-                end_time = start_time + duration_per_word
-                o.append((start_time, end_time, word))
-                start_time = end_time
-
+            o.append((start, end, word.get("word")))
         return o
 
 
     def segments_end_ts(self, res):
-        return [s["end"] for s in res]
+        return [s["end"] for s in res.words]
 
     def transcribe(self, audio_data, prompt=None, *args, **kwargs):
         # Write the audio data to a buffer
@@ -212,10 +209,11 @@ class OpenaiApiASR(ASRBase):
             "model": self.modelname,
             "file": buffer,
             "response_format": self.response_format,
-            "temperature": self.temperature
+            "temperature": self.temperature,
+            "timestamp_granularities": ["word", "segment"]
         }
-        if self.task != "translate" and self.language:
-            params["language"] = self.language
+        if self.task != "translate" and self.original_language:
+            params["language"] = self.original_language
         if prompt:
             params["prompt"] = prompt
 
@@ -225,14 +223,13 @@ class OpenaiApiASR(ASRBase):
             proc = self.client.audio.transcriptions
 
         # Process transcription/translation
-
         transcript = proc.create(**params)
         print(f"OpenAI API processed accumulated {self.transcribed_seconds} seconds",file=self.logfile)
 
-        return transcript.segments
+        return transcript
 
     def use_vad(self):
-        self.use_vad = True
+        self.use_vad_opt = True
 
     def set_translate_task(self):
         self.task = "translate"
@@ -548,7 +545,7 @@ def add_shared_args(parser):
     parser.add_argument('--model', type=str, default='large-v2', choices="tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large".split(","),help="Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.")
     parser.add_argument('--model_cache_dir', type=str, default=None, help="Overriding the default model cache dir where models downloaded from the hub are saved")
     parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.")
-    parser.add_argument('--lan', '--language', type=str, default='en', help="Language code for transcription, e.g. en,de,cs.")
+    parser.add_argument('--lan', '--language', type=str, default='auto', help="Source language code, e.g. en,de,cs, or 'auto' for language detection.")
     parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
     parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped", "openai-api"],help='Load only this backend for Whisper processing.')
     parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
@@ -600,9 +597,9 @@ if __name__ == "__main__":
         e = time.time()
         print(f"done. It took {round(e-t,2)} seconds.",file=logfile)
 
-        if args.vad:
-            print("setting VAD filter",file=logfile)
-            asr.use_vad()
+    if args.vad:
+        print("setting VAD filter",file=logfile)
+        asr.use_vad()
 
     if args.task == "translate":
         asr.set_translate_task()
