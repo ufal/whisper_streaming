@@ -4,6 +4,7 @@ from whisper_online import *
 import sys
 import argparse
 import os
+import numpy as np
 parser = argparse.ArgumentParser()
 
 # server options
@@ -137,8 +138,8 @@ class ServerProcessor:
             if not raw_bytes:
                 break
             sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
-            audio, _ = librosa.load(sf,sr=SAMPLING_RATE)
-            out.append(audio.astype('float32'))
+            audio, _ = librosa.load(sf,sr=SAMPLING_RATE,dtype=np.float32)
+            out.append(audio)
         if not out:
             return None
         return np.concatenate(out)
