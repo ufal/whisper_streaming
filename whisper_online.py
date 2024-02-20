@@ -11,7 +11,7 @@ import math
 @lru_cache
 def load_audio(fname):
     a, _ = librosa.load(fname, sr=16000)
-    return a
+    return a.astype('float32')
 
 def load_audio_chunk(fname, beg, end):
     audio = load_audio(fname)

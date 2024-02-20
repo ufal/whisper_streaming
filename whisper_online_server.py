@@ -138,7 +138,7 @@ class ServerProcessor:
                 break
             sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
             audio, _ = librosa.load(sf,sr=SAMPLING_RATE)
-            out.append(audio)
+            out.append(audio.astype('float32'))
         if not out:
             return None
         return np.concatenate(out)
