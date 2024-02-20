@@ -329,8 +329,6 @@ class OnlineASRProcessor:
         self.transcript_buffer = HypothesisBuffer(logfile=self.logfile)
         self.commited = []
 
-        self.silence_iters = 0
-
     def insert_audio_chunk(self, audio):
         self.audio_buffer = np.append(self.audio_buffer, audio)
 
