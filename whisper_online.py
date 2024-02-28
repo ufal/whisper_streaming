@@ -152,7 +152,8 @@ class FasterWhisperASR(ASRBase):
 class OpenaiApiASR(ASRBase):
     """Uses OpenAI's Whisper API for audio transcription."""
 
-    def __init__(self, lan=None, temperature=0, logfile=sys.stderr):
+    def __init__(self, modelsize=0, lan=None, cache_dir=None, model_dir=None, temperature=0, logfile=sys.stderr):
+        # modelsize, lan, cache_dir, model_dir are not used, but they're here for compatibility with the other ASR classes
         self.logfile = logfile
 
         self.modelname = "whisper-1"  
@@ -189,7 +190,7 @@ class OpenaiApiASR(ASRBase):
             if any(s[0] <= start <= s[1] for s in no_speech_segments):
                 # print("Skipping word", word.get("word"), "because it's in a no-speech segment")
                 continue
-            o.append((start, end, word.get("word")))
+            o.append((start, end, word.get("word").strip()))
         return o
 
 
