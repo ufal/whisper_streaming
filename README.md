@@ -14,18 +14,23 @@ Demo video: https://player.vimeo.com/video/840442741
 
 [Slides](http://ufallab.ms.mff.cuni.cz/~machacek/pre-prints/AACL23-2.11.2023-Turning-Whisper-oral.pdf) -- 15 minutes oral presentation at IJCNLP-AACL 2023
 
-Please, cite us. [Bibtex citation](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/bib/2023.ijcnlp-demo.3.bib):
+Please, cite us. [ACL Anthology](https://aclanthology.org/2023.ijcnlp-demo.3/), [Bibtex citation](https://aclanthology.org/2023.ijcnlp-demo.3.bib):
 
 ```
-@InProceedings{machacek-dabre-bojar:2023:ijcnlp,
-  author    = {Macháček, Dominik  and  Dabre, Raj  and  Bojar, Ondřej},
-  title     = {Turning Whisper into Real-Time Transcription System},
-  booktitle      = {System Demonstrations},
-  month          = {November},
-  year           = {2023},
-  address        = {Bali, Indonesia},
-  publisher      = {Asian Federation of Natural Language Processing},
-  pages     = {17--24},
+@inproceedings{machacek-etal-2023-turning,
+    title = "Turning Whisper into Real-Time Transcription System",
+    author = "Mach{\'a}{\v{c}}ek, Dominik  and
+      Dabre, Raj  and
+      Bojar, Ond{\v{r}}ej",
+    editor = "Saha, Sriparna  and
+      Sujaini, Herry",
+    booktitle = "Proceedings of the 13th International Joint Conference on Natural Language Processing and the 3rd Conference of the Asia-Pacific Chapter of the Association for Computational Linguistics: System Demonstrations",
+    month = nov,
+    year = "2023",
+    address = "Bali, Indonesia",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.ijcnlp-demo.3",
+    pages = "17--24",
 }
 ```
 
