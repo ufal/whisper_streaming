@@ -23,23 +23,8 @@ SAMPLING_RATE = 16000
 
 size = args.model
 language = args.lan
-
-asr = asr_factory(args)
-if args.task == "translate":
-    asr.set_translate_task()
-    tgt_language = "en"
-else:
-    tgt_language = language
-
+asr, online = asr_factory(args)
 min_chunk = args.min_chunk_size
-
-if args.buffer_trimming == "sentence":
-    tokenizer = create_tokenizer(tgt_language)
-else:
-    tokenizer = None
-online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
-
-
 
 demo_audio_path = "cs-maji-2.16k.wav"
 if os.path.exists(demo_audio_path):
