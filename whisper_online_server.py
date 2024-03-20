@@ -24,35 +24,12 @@ SAMPLING_RATE = 16000
 size = args.model
 language = args.lan
 
-t = time.time()
-print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",flush=True)
-
-if args.backend == "faster-whisper":
-    from faster_whisper import WhisperModel
-    asr_cls = FasterWhisperASR
-elif args.backend == "openai-api":
-    asr_cls = OpenaiApiASR
-else:
-    import whisper
-    import whisper_timestamped
-#    from whisper_timestamped_model import WhisperTimestampedASR
-    asr_cls = WhisperTimestampedASR
-
-asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
-
+asr = asr_factory(args)
 if args.task == "translate":
     asr.set_translate_task()
     tgt_language = "en"
 else:
     tgt_language = language
-
-e = time.time()
-print(f"done. It took {round(e-t,2)} seconds.",file=sys.stderr)
-
-if args.vad:
-    print("setting VAD filter",file=sys.stderr)
-    asr.use_vad()
-
 
 min_chunk = args.min_chunk_size
 
