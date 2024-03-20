@@ -58,6 +58,7 @@ class WhisperTimestampedASR(ASRBase):
 
     def load_model(self, modelsize=None, cache_dir=None, model_dir=None):
         import whisper
+        import whisper_timestamped
         from whisper_timestamped import transcribe_timestamped
         self.transcribe_timestamped = transcribe_timestamped
         if model_dir is not None:
@@ -558,10 +559,8 @@ def asr_factory(args, logfile=sys.stderr):
         asr = OpenaiApiASR(lan=args.lan)
     else:
         if backend == "faster-whisper":
-            from faster_whisper import FasterWhisperASR
             asr_cls = FasterWhisperASR
         else:
-            from whisper_timestamped import WhisperTimestampedASR
             asr_cls = WhisperTimestampedASR
 
         # Only for FasterWhisperASR and WhisperTimestampedASR
