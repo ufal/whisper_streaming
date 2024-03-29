@@ -159,7 +159,7 @@ The code whisper_online.py is nicely commented, read it as the full documentatio
 
 This pseudocode describes the interface that we suggest for your implementation. You can implement any features that you need for your application.
 
-```
+```python
 from whisper_online import *
 
 src_lan = "en"  # source language
