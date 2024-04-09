@@ -394,9 +394,9 @@ class OnlineASRProcessor:
         if len(self.audio_buffer)/self.SAMPLING_RATE > s:
             self.chunk_completed_segment(res)
 
-            # alternative: on any word
+            # 备选方案：在任何单词上
             #l = self.buffer_time_offset + len(self.audio_buffer)/self.SAMPLING_RATE - 10
-            # let's find commited word that is less
+            # 让我们找到少于 l 的已确认单词
             #k = len(self.commited)-1
             #while k>0 and self.commited[k][1] > l:
             #    k -= 1
@@ -417,7 +417,7 @@ class OnlineASRProcessor:
             return
         while len(sents) > 2:
             sents.pop(0)
-        # we will continue with audio processing at this timestamp
+        # 我们将在此时间戳继续音频处理
         chunk_at = sents[-2][1]
 
         print(f"--- sentence chunked at {chunk_at:2.2f}",file=self.logfile)
@@ -493,9 +493,9 @@ class OnlineASRProcessor:
 
 
     def to_flush(self, sents, sep=None, offset=0, ):
-        # concatenates the timestamped words or sentences into one sequence that is flushed in one line
-        # sents: [(beg1, end1, "sentence1"), ...] or [] if empty
-        # return: (beg1,end-of-last-sentence,"concatenation of sentences") or (None, None, "") if empty
+        # 将时间戳标记的单词或句子连接成一个在一行中刷新的序列
+        # sents: [(beg1, end1, "sentence1"), ...] 或空列表 []（如果为空）
+        # 返回: 如果为空，则返回 (None, None, "")，否则返回 (beg1, end-of-last-sentence,"concatenation of sentences")
         if sep is None:
             sep = self.asr.sep
         t = sep.join(s[2] for s in sents)
@@ -521,18 +521,18 @@ def create_tokenizer(lan):
                 return tokenize_uk.tokenize_sents(text)
         return UkrainianTokenizer()
 
-    # supported by fast-mosestokenizer
+    # 支持快速的 MosesTokenizer
     if lan in "as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh".split():
         from mosestokenizer import MosesTokenizer
         return MosesTokenizer(lan)
 
-    # the following languages are in Whisper, but not in wtpsplit:
+    # 以下语言在 Whisper 中支持，但不在 wtpsplit 中：
     if lan in "as ba bo br bs fo haw hr ht jw lb ln lo mi nn oc sa sd sn so su sw tk tl tt".split():
-        print(f"{lan} code is not supported by wtpsplit. Going to use None lang_code option.", file=sys.stderr)
+        print(f"{lan} 代码不受 wtpsplit 支持。将使用 None lang_code 选项。", file=sys.stderr)
         lan = None
 
     from wtpsplit import WtP
-    # downloads the model from huggingface on the first use
+    # 在第一次使用时从 huggingface 下载模型
     wtp = WtP("wtp-canine-s-12l-no-adapters")
     class WtPtok:
         def split(self, sent):
@@ -541,27 +541,27 @@ def create_tokenizer(lan):
 
 
 def add_shared_args(parser):
-    """shared args for simulation (this entry point) and server
-    parser: argparse.ArgumentParser object
+    """为模拟 (此入口点) 和服务器添加共享参数
+    parser: argparse.ArgumentParser 对象
     """
-    parser.add_argument('--min-chunk-size', type=float, default=1.0, help='Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was received by this time.')
-    parser.add_argument('--model', type=str, default='large-v2', choices="tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large".split(","),help="Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.")
-    parser.add_argument('--model_cache_dir', type=str, default=None, help="Overriding the default model cache dir where models downloaded from the hub are saved")
-    parser.add_argument('--model_dir', type=str, default=None, help="Dir where Whisper model.bin and other files are saved. This option overrides --model and --model_cache_dir parameter.")
-    parser.add_argument('--lan', '--language', type=str, default='auto', help="Source language code, e.g. en,de,cs, or 'auto' for language detection.")
-    parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
-    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped", "openai-api"],help='Load only this backend for Whisper processing.')
-    parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
-    parser.add_argument('--buffer_trimming', type=str, default="segment", choices=["sentence", "segment"],help='Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter must be installed for "sentence" option.')
-    parser.add_argument('--buffer_trimming_sec', type=float, default=15, help='Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered.')
+    parser.add_argument('--min-chunk-size', type=float, default=1.0, help='最小音频块大小（秒）。它等待最多这么长的时间来进行处理。如果处理时间较短，则等待，否则处理到此时收到的整个段。')
+    parser.add_argument('--model', type=str, default='large-v2', choices="tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large".split(","),help="要使用的 Whisper 模型的名称大小（默认值：large-v2）。如果模型缓存目录中不存在，则会自动从模型存储库下载模型。")
+    parser.add_argument('--model_cache_dir', type=str, default=None, help="覆盖默认模型缓存目录，其中从存储库下载的模型保存")
+    parser.add_argument('--model_dir', type=str, default=None, help="保存 Whisper model.bin 和其他文件的目录。此选项将覆盖 --model 和 --model_cache_dir 参数。")
+    parser.add_argument('--lan', '--language', type=str, default='auto', help="源语言代码，例如 en、de、cs，或 'auto' 用于语言检测。")
+    parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="转录或翻译。")
+    parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped", "openai-api"],help='仅加载此 Whisper 处理的后端。')
+    parser.add_argument('--vad', action="store_true", default=False, help='使用 VAD = 声音活动检测，默认参数。')
+    parser.add_argument('--buffer_trimming', type=str, default="segment", choices=["sentence", "segment"],help='缓冲区修剪策略 -- 修剪标记有标点符号的已完成句子，并由句子分段器检测到的句子，或 Whisper 返回的已完成段。对于 "sentence" 选项，必须安装句子分段器。')
+    parser.add_argument('--buffer_trimming_sec', type=float, default=15, help='缓冲区修剪长度阈值（秒）。如果缓冲区长度较长，则会触发修剪句子/段。')
 
 def asr_factory(args, logfile=sys.stderr):
     """
-    Creates and configures an ASR instance based on the specified backend and arguments.
+    根据指定的后端和参数创建和配置 ASR 实例。
     """
     backend = args.backend
     if backend == "openai-api":
-        print("Using OpenAI API.", file=logfile)
+        print("使用 OpenAI API。", file=logfile)
         asr = OpenaiApiASR(lan=args.lan)
     else:
         if backend == "faster-whisper":
@@ -569,55 +569,54 @@ def asr_factory(args, logfile=sys.stderr):
         else:
             asr_cls = WhisperTimestampedASR
 
-        # Only for FasterWhisperASR and WhisperTimestampedASR
+        # 仅适用于 FasterWhisperASR 和 WhisperTimestampedASR
         size = args.model
         t = time.time()
-        print(f"Loading Whisper {size} model for {args.lan}...", file=logfile, end=" ", flush=True)
+        print(f"正在加载 Whisper {size} 模型用于 {args.lan}...", file=logfile, end=" ", flush=True)
         asr = asr_cls(modelsize=size, lan=args.lan, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
         e = time.time()
-        print(f"done. It took {round(e-t,2)} seconds.", file=logfile)
+        print(f"完成。耗时 {round(e-t,2)} 秒。", file=logfile)
 
-    # Apply common configurations
-    if getattr(args, 'vad', False):  # Checks if VAD argument is present and True
-        print("Setting VAD filter", file=logfile)
+    # 应用常见配置
+    if getattr(args, 'vad', False):  # 检查是否存在 VAD 参数并且为 True
+        print("设置 VAD 过滤器", file=logfile)
         asr.use_vad()
 
     return asr
 
 ## main:
-
 if __name__ == "__main__":
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('audio_path', type=str, help="Filename of 16kHz mono channel wav, on which live streaming is simulated.")
+    parser.add_argument('audio_path', type=str, help="16kHz 单声道 wav 文件的文件名，用于模拟实时流.")
     add_shared_args(parser)
-    parser.add_argument('--start_at', type=float, default=0.0, help='Start processing audio at this time.')
-    parser.add_argument('--offline', action="store_true", default=False, help='Offline mode.')
-    parser.add_argument('--comp_unaware', action="store_true", default=False, help='Computationally unaware simulation.')
+    parser.add_argument('--start_at', type=float, default=0.0, help='从这个时间开始处理音频.')
+    parser.add_argument('--offline', action="store_true", default=False, help='离线模式.')
+    parser.add_argument('--comp_unaware', action="store_true", default=False, help='不考虑计算能力的模拟.')
     
     args = parser.parse_args()
 
-    # reset to store stderr to different file stream, e.g. open(os.devnull,"w")
+    # 重设以将 stderr 存储到不同的文件流中，例如 open(os.devnull,"w")
     logfile = sys.stderr
 
     if args.offline and args.comp_unaware:
-        print("No or one option from --offline and --comp_unaware are available, not both. Exiting.",file=logfile)
+        print("离线和不考虑计算能力的选项中只能选择一个或零个，不能同时选择两个。退出。", file=logfile)
         sys.exit(1)
 
     audio_path = args.audio_path
 
     SAMPLING_RATE = 16000
     duration = len(load_audio(audio_path))/SAMPLING_RATE
-    print("Audio duration is: %2.2f seconds" % duration, file=logfile)
+    print("音频持续时间为：%2.2f 秒" % duration, file=logfile)
 
     asr = asr_factory(args, logfile=logfile)
     language = args.lan
     if args.task == "translate":
         asr.set_translate_task()
-        tgt_language = "en"  # Whisper translates into English
+        tgt_language = "en"  # Whisper 翻译成英语
     else:
-        tgt_language = language  # Whisper transcribes in this language
+        tgt_language = language  # Whisper 在该语言中进行转录
 
     
     min_chunk = args.min_chunk_size
@@ -628,22 +627,22 @@ if __name__ == "__main__":
     online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
 
-    # load the audio into the LRU cache before we start the timer
+    # 在启动计时器之前将音频加载到 LRU 缓存中
     a = load_audio_chunk(audio_path,0,1)
 
-    # warm up the ASR, because the very first transcribe takes much more time than the other
+    # 热身 ASR，因为第一次转录比其他时间要花费更多时间
     asr.transcribe(a)
 
     beg = args.start_at
     start = time.time()-beg
 
     def output_transcript(o, now=None):
-        # output format in stdout is like:
+        # stdout 输出格式如下：
         # 4186.3606 0 1720 Takhle to je
-        # - the first three words are:
-        #    - emission time from beginning of processing, in milliseconds
-        #    - beg and end timestamp of the text segment, as estimated by Whisper model. The timestamps are not accurate, but they're useful anyway
-        # - the next words: segment transcript
+        # - 前三个单词是：
+        #    - 从处理开始到现在的发射时间，以毫秒为单位
+        #    - Whisper 模型估计的文本段的起始和结束时间戳。时间戳不准确，但仍然有用
+        # - 后续单词：段的转录
         if now is None:
             now = time.time()-start
         if o[0] is not None:
@@ -652,18 +651,18 @@ if __name__ == "__main__":
         else:
             print(o,file=logfile,flush=True)
 
-    if args.offline: ## offline mode processing (for testing/debugging)
+    if args.offline: ## 离线模式处理（用于测试/调试）
         a = load_audio(audio_path)
         online.insert_audio_chunk(a)
         try:
             o = online.process_iter()
         except AssertionError:
-            print("assertion error",file=logfile)
+            print("断言错误",file=logfile)
             pass
         else:
             output_transcript(o)
         now = None
-    elif args.comp_unaware:  # computational unaware mode 
+    elif args.comp_unaware:  # 不考虑计算能力模式 
         end = beg + min_chunk
         while True:
             a = load_audio_chunk(audio_path,beg,end)
@@ -671,12 +670,12 @@ if __name__ == "__main__":
             try:
                 o = online.process_iter()
             except AssertionError:
-                print("assertion error",file=logfile)
+                print("断言错误",file=logfile)
                 pass
             else:
                 output_transcript(o, now=end)
 
-            print(f"## last processed {end:.2f}s",file=logfile,flush=True)
+            print(f"## 最后处理时间 {end:.2f} 秒",file=logfile,flush=True)
 
             if end >= duration:
                 break
@@ -689,7 +688,7 @@ if __name__ == "__main__":
                 end += min_chunk
         now = duration
 
-    else: # online = simultaneous mode
+    else: # 在线 = 同时模式
         end = 0
         while True:
             now = time.time() - start
@@ -703,12 +702,12 @@ if __name__ == "__main__":
             try:
                 o = online.process_iter()
             except AssertionError:
-                print("assertion error",file=logfile)
+                print("断言错误",file=logfile)
                 pass
             else:
                 output_transcript(o)
             now = time.time() - start
-            print(f"## last processed {end:.2f} s, now is {now:.2f}, the latency is {now-end:.2f}",file=logfile,flush=True)
+            print(f"## 最后处理时间 {end:.2f} 秒，当前时间为 {now:.2f} 秒，延迟为 {now-end:.2f} 秒",file=logfile,flush=True)
 
             if end >= duration:
                 break
