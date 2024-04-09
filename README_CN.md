@@ -1,5 +1,5 @@
 # whisper_streaming
-用于长篇语音转文字转换和翻译的 Whisper 实时流式传输(Whisper realtime streaming)
+用于长篇语音转文字转换和翻译的 Whisper 实时流式传输工具(Whisper realtime streaming)。
 
 **将 Whisper 转换为实时转录系统**
 
