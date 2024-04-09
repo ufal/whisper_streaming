@@ -1,6 +1,8 @@
 # whisper_streaming
 Whisper realtime streaming for long speech-to-text transcription and translation
 
+Useful link: [Click here](https://github.com/Gloridust/whisper_streaming_CN) to go to the Chinese supported version.
+
 **Turning Whisper into Real-Time Transcription System**
 
 Demonstration paper, by Dominik Macháček, Raj Dabre, Ondřej Bojar, 2023
