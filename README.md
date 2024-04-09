@@ -1,22 +1,21 @@
+NOTE: This is a amateur translated version based on the March 29, 2024 version of the original English project. To read the original version, please [click here](https://github.com/ufal/whisper_streaming).
+
 # whisper_streaming
-Whisper realtime streaming for long speech-to-text transcription and translation
+用于长篇语音转文字转换和翻译的 Whisper 实时流式传输工具(Whisper realtime streaming)。
 
-**Turning Whisper into Real-Time Transcription System**
+**将 Whisper 改造为实时转录系统**
 
-Demonstration paper, by Dominik Macháček, Raj Dabre, Ondřej Bojar, 2023
+Dominik Macháček、Raj Dabre、Ondřej Bojar 在2023年撰写的演示论文。
 
-Abstract:    Whisper is one of the recent state-of-the-art multilingual speech recognition and translation models, however, it is not designed for real time transcription. In this paper, we build on top of Whisper and create Whisper-Streaming, an implementation of real-time speech transcription and translation of Whisper-like models. Whisper-Streaming uses local agreement policy with self-adaptive latency to enable streaming transcription. We show that Whisper-Streaming achieves high quality and 3.3 seconds latency on unsegmented long-form speech transcription test set, and we demonstrate its robustness and practical usability as a component in live transcription service at a multilingual conference. 
+摘要：Whisper 是最近一种最先进的多语言语音识别和翻译模型之一，然而，它并非设计用于实时转录。在本文中，我们在 Whisper 的基础上构建了 Whisper-Streaming，并实现了类似 Whisper 模型的实时语音转录和翻译。Whisper-Streaming 使用本地协议与自适应延迟来实现流式转录。我们展示了 Whisper-Streaming 在未分段的长篇语音转录测试集上达到了高质量和 3.3 秒的延迟，并演示了它作为多语言会议现场转录服务中的组件的稳健性和实用性。
 
+论文 PDF：https://aclanthology.org/2023.ijcnlp-demo.3.pdf
 
-Paper PDF:
-https://aclanthology.org/2023.ijcnlp-demo.3.pdf
+演示视频：https://player.vimeo.com/video/840442741
 
+[幻灯片](http://ufallab.ms.mff.cuni.cz/~machacek/pre-prints/AACL23-2.11.2023-Turning-Whisper-oral.pdf) -- 2023 年 IJCNLP-AACL 15 分钟口头报告
 
-Demo video: https://player.vimeo.com/video/840442741
-
-[Slides](http://ufallab.ms.mff.cuni.cz/~machacek/pre-prints/AACL23-2.11.2023-Turning-Whisper-oral.pdf) -- 15 minutes oral presentation at IJCNLP-AACL 2023
-
-Please, cite us. [ACL Anthology](https://aclanthology.org/2023.ijcnlp-demo.3/), [Bibtex citation](https://aclanthology.org/2023.ijcnlp-demo.3.bib):
+请引用我们。[ACL 文集](https://aclanthology.org/2023.ijcnlp-demo.3/)，[Bibtex 引用](https://aclanthology.org/2023.ijcnlp-demo.3.bib):
 
 ```
 @inproceedings{machacek-etal-2023-turning,
@@ -36,48 +35,42 @@ Please, cite us. [ACL Anthology](https://aclanthology.org/2023.ijcnlp-demo.3/), 
 }
 ```
 
-## Installation
+## 安装
 
-1) ``pip install librosa soundfile`` -- audio processing library
+1) `pip install librosa soundfile` -- 音频处理库
 
-2) Whisper backend.
+2) Whisper 后端。
 
- Several alternative backends are integrated. The most recommended one is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
+ 集成了几种替代后端。最推荐的是 [faster-whisper](https://github.com/guillaumekln/faster-whisper)，支持 GPU。遵循其关于 NVIDIA 库的说明 -- 我们成功使用了 CUDNN 8.5.0 和 CUDA 11.7。使用 `pip install faster-whisper` 安装。
 
-Alternative, less restrictive, but slower backend is [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
+其次，另一种 less restrictive，但速度较慢的后端是 [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
 
-Thirdly, it's also possible to run this software from the [OpenAI Whisper API](https://platform.openai.com/docs/api-reference/audio/createTranscription). This solution is fast and requires no GPU, just a small VM will suffice, but you will need to pay OpenAI for api access. Also note that, since each audio fragment is processed multiple times, the [price](https://openai.com/pricing) will be higher than obvious from the pricing page, so keep an eye on costs while using. Setting a higher chunk-size will reduce costs significantly. 
-Install with: `pip install openai`
+第三，也可以通过 [OpenAI Whisper API](https://platform.openai.com/docs/api-reference/audio/createTranscription) 运行此软件。这种解决方案速度快，不需要 GPU，只需要一个小型 VM 就足够了，但您需要为 api 访问支付 OpenAI 费用。另请注意，由于每个音频片段被多次处理，[价格](https://openai.com/pricing) 将高于定价页面上的明显价格，因此在使用过程中请注意成本。设置更高的块大小将显著降低成本。 
+使用 `pip install openai` 安装。
 
-For running with the openai-api backend, make sure that your [OpenAI api key](https://platform.openai.com/api-keys) is set in the `OPENAI_API_KEY` environment variable. For example, before running, do: `export OPENAI_API_KEY=sk-xxx` with *sk-xxx* replaced with your api key. 
+要使用 openai-api 后端运行，请确保您的 [OpenAI api 密钥](https://platform.openai.com/api-keys) 已设置在 `OPENAI_API_KEY` 环境变量中。例如，在运行之前执行：`export OPENAI_API_KEY=sk-xxx`，其中 *sk-xxx* 替换为您的 api 密钥。 
 
-The backend is loaded only when chosen. The unused one does not have to be installed.
+只有在选择时加载后端。未使用的后端不必安装。
 
-3) Optional, not recommended: sentence segmenter (aka sentence tokenizer) 
+3) 可选但是不推荐的: 句子分段器（又称句子分词器）
 
-Two buffer trimming options are integrated and evaluated. They have impact on
-the quality and latency. The default "segment" option performs better according
-to our tests and does not require any sentence segmentation installed. 
+集成并评估了两种缓冲器修剪方案。它们对质量和延迟都有影响。根据我们的测试，默认的 "分段 "选项性能更好，而且不需要安装任何句子分段功能。
 
-The other option, "sentence" -- trimming at the end of confirmed sentences,
-requires sentence segmenter installed.  It splits punctuated text to sentences by full
-stops, avoiding the dots that are not full stops. The segmenters are language
-specific.  The unused one does not have to be installed. We integrate the
-following segmenters, but suggestions for better alternatives are welcome.
+另一个选项是 "sentence" -- 在已确认的句子末尾修剪，需要安装句子分段器。它通过句号将有标点的文本拆分成句子，避免了不是句号的句号。分段器是语言特定的。未使用的分段器无需安装。我们集成了以下分段器，但欢迎提出更好的替代方案。
 
-- `pip install opus-fast-mosestokenizer` for the languages with codes `as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh`
+- `pip install opus-fast-mosestokenizer` 适用于代码 `as bn ca cs de el en es et fi fr ga gu hi hu is it kn lt lv ml mni mr nl or pa pl pt ro ru sk sl sv ta te yue zh` 的语言
 
-- `pip install tokenize_uk` for Ukrainian -- `uk`
+- `pip install tokenize_uk` 适用于乌克兰语 -- `uk`
 
-- for other languages, we integrate a good performing multi-lingual model of `wtpslit`. It requires `pip install torch wtpsplit`, and its neural model `wtp-canine-s-12l-no-adapters`. It is downloaded to the default huggingface cache during the first use. 
+- 对于其他语言，我们集成了一个表现良好的多语言模型 `wtpslit`。它需要 `pip install torch wtpsplit`，以及它的神经模型 `wtp-canine-s-12l-no-adapters`。第一次使用时，它会下载到默认的 huggingface 缓存中。
 
-- we did not find a segmenter for languages `as ba bo br bs fo haw hr ht jw lb ln lo mi nn oc sa sd sn so su sw tk tl tt` that are supported by Whisper and not by wtpsplit. The default fallback option for them is wtpsplit with unspecified language. Alternative suggestions welcome.
+- 我们没有找到语言 `as ba bo br bs fo haw hr ht jw lb ln lo mi nn oc sa sd sn so su sw tk tl tt` 的分段器，这些语言由 Whisper 支持，但不受 wtpsplit 支持。对于它们的默认回退选项是未指定语言的 wtpsplit。欢迎提出替代方案。
 
-In case of installation issues of opus-fast-mosestokenizer, especially on Windows and Mac, we recommend using only the "segment" option that does not require it.
+如果在 Windows 和 Mac 上安装 opus-fast-mosestokenizer 时遇到问题，我们建议仅使用不需要它的 "segment" 选项。
 
-## Usage
+## 使用
 
-### Real-time simulation from audio file
+### 从音频文件进行实时模拟
 
 ```
 usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
@@ -113,27 +106,25 @@ options:
   --comp_unaware        Computationally unaware simulation.
 ```
 
-Example:
+示例:
 
-It simulates realtime processing from a pre-recorded mono 16k wav file.
+从预先录制的单声道 16k wav 文件模拟实时处理。
 
 ```
 python3 whisper_online.py en-demo16.wav --language en --min-chunk-size 1 > out.txt
 ```
 
-Simulation modes:
+模拟模式:
 
-- default mode, no special option: real-time simulation from file, computationally aware. The chunk size is `MIN_CHUNK_SIZE` or larger, if more audio arrived during last update computation.
+- 默认模式，没有特殊选项: 从文件实时模拟，计算机感知。块大小是 `MIN_CHUNK_SIZE` 或更大，如果在最后一次更新计算期间到达更多音频，则更大。
 
-- `--comp_unaware` option: computationally unaware simulation. It means that the timer that counts the emission times "stops" when the model is computing. The chunk size is always `MIN_CHUNK_SIZE`. The latency is caused only by the model being unable to confirm the output, e.g. because of language ambiguity etc., and not because of slow hardware or suboptimal implementation. We implement this feature for finding the lower bound for latency.
+- `--comp_unaware` 选项: 计算机不知道的模拟。这意味着当模型正在计算时，计时器（计算发射时间的计时器）会“停止”。块大小始终为 `MIN_CHUNK_SIZE`。延迟仅由于模型无法确认输出，例如由于语言歧义等原因造成，并非由于慢硬件或次优实现。我们实现此功能以找到延迟的下限。
 
-- `--start_at START_AT`: Start processing audio at this time. The first update receives the whole audio by `START_AT`. It is useful for debugging, e.g. when we observe a bug in a specific time in audio file, and want to reproduce it quickly, without long waiting.
+- `--start_at START_AT`: 从此时间开始处理音频。第一个更新将接收到 `START_AT` 之前的整个音频。对于调试很有用，例如，当我们观察到音频文件中特定时间的错误时，并希望快速重现它，而不需等待很长时间。
 
-- `--offline` option: It processes the whole audio file at once, in offline mode. We implement it to find out the lowest possible WER on given audio file.
+- `--offline` 选项: 它一次性在离线模式下处理整个音频文件。我们实现它是为了找出在给定音频文件上可能的最低 WER。
 
-
-
-### Output format
+### 输出格式
 
 ```
 2691.4399 300 1380 Chairman, thank you.
@@ -148,96 +139,73 @@ Simulation modes:
 18324.9285 12560 14420 colleagues across the
 ```
 
-[See description here](https://github.com/ufal/whisper_streaming/blob/d915d790a62d7be4e7392dde1480e7981eb142ae/whisper_online.py#L361)
+[在此处查看描述](https://github.com/ufal/whisper_streaming/blob/d915d790a62d7be4e7392dde1480e7981eb142ae/whisper_online.py#L361)
 
-### As a module
+### 作为模块
 
-TL;DR: use OnlineASRProcessor object and its methods insert_audio_chunk and process_iter. 
+TL;DR: 使用 OnlineASRProcessor 对象及其方法 insert_audio_chunk 和 process_iter。
 
-The code whisper_online.py is nicely commented, read it as the full documentation.
+代码 whisper_online.py 有良好的注释，请将其阅读为完整文档。
 
-
-This pseudocode describes the interface that we suggest for your implementation. You can implement any features that you need for your application.
+此伪代码描述了我们建议用于您的实现的接口。您可以为应用程序实现任何您需要的功能。
 
 ```
 from whisper_online import *
 
-src_lan = "en"  # source language
-tgt_lan = "en"  # target language  -- same as source for ASR, "en" if translate task is used
+src_lan = "en"  # 源语言
+tgt_lan = "en"  # 目标语言 -- 对于 ASR 来说与源语言相同，如果使用 translate 任务，则为 "en"
 
-asr = FasterWhisperASR(lan, "large-v2")  # loads and wraps Whisper model
-# set options:
-# asr.set_translate_task()  # it will translate from lan into English
-# asr.use_vad()  # set using VAD
+asr = FasterWhisperASR(lan, "large-v2")  # 加载和包装 Whisper 模型
+# 设置选项:
+# asr.set_translate_task()  # 它将从 lan 翻译为英语
+# asr.use_vad()  # 设置使用 VAD
 
-online = OnlineASRProcessor(asr)  # create processing object with default buffer trimming option
+online = OnlineASRProcessor(asr)  # 使用默认缓冲区修剪选项创建处理对象
 
-while audio_has_not_ended:   # processing loop:
-	a = # receive new audio chunk (and e.g. wait for min_chunk_size seconds first, ...)
+while audio_has_not_ended:   # 处理循环:
+	a = # 接收新的音频块（例如等待 min_chunk_size 秒，...）
 	online.insert_audio_chunk(a)
 	o = online.process_iter()
-	print(o) # do something with current partial output
-# at the end of this audio processing
+	print(o) # 处理当前部分输出
+# 在此音频处理结束时
 o = online.finish()
-print(o)  # do something with the last output
+print(o)  # 处理最后输出
 
-
-online.init()  # refresh if you're going to re-use the object for the next audio
+online.init()  # 如果要重新使用对象进行下一次音频处理，请刷新
 ```
 
-### Server -- real-time from mic
+### 服务器 -- 实时来自麦克风
 
-`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection. See help message (`-h` option).
+`whisper_online_server.py` 具有与 `whisper_online.py` 相同的模型选项，以及 TCP 连接的 `--host` 和 `--port`。查看帮助消息（`-h` 选项）。
 
-Client example:
+客户端示例:
 
 ```
 arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 ```
 
-- arecord sends realtime audio from a sound device (e.g. mic), in raw audio format -- 16000 sampling rate, mono channel, S16\_LE -- signed 16-bit integer low endian. (use the alternative to arecord that works for you)
+- arecord 从声音设备（例如麦克风）发送实时音频，以原始音频格式发送 -- 16000 采样率，单声道，S16_LE -- 带符号的 16 位整数低端。 （使用适合您的 arecord 替代品）
 
-- nc is netcat with server's host and port
+- nc 是具有服务器主机和端口的 netcat。
 
+## 背景
 
-## Background
+默认的 Whisper 适用于最多包含一个完整句子的 30 秒音频块。较长的音频文件必须拆分为较短的块，并与“初始化提示”合并。在低延迟的同时流式模式下，简单且天真的固定大小的窗口切块效果不佳，它可能会将一个单词分割成两部分。还需要知道何时转录稳定，应该被确认（“提交”）和跟进，以及未来的内容何时会使转录更清晰。
 
-Default Whisper is intended for audio chunks of at most 30 seconds that contain
-one full sentence. Longer audio files must be split to shorter chunks and
-merged with "init prompt". In low latency simultaneous streaming mode, the
-simple and naive chunking fixed-sized windows does not work well, it can split
-a word in the middle. It is also necessary to know when the transcribt is
-stable, should be confirmed ("commited") and followed up, and when the future
-content makes the transcript clearer. 
+为此，有 LocalAgreement-n 策略：如果 n 个连续更新，每个更新都有一个新的可用音频流块，并且它们都同意前缀转录，则它被确认。 （参考：CUNI-KIT 在 IWSLT 2022 等）
 
-For that, there is LocalAgreement-n policy: if n consecutive updates, each with
-a newly available audio stream chunk, agree on a prefix transcript, it is
-confirmed. (Reference: CUNI-KIT at IWSLT 2022 etc.)
-
-In this project, we re-use the idea of Peter Polák from this demo:
+在本项目中，我们重用了来自此演示的 Peter Polák 的想法：
 https://github.com/pe-trik/transformers/blob/online_decode/examples/pytorch/online-decoding/whisper-online-demo.py
-However, it doesn't do any sentence segmentation, but Whisper produces
-punctuation and the libraries `faster-whisper` and `whisper_transcribed` make
-word-level timestamps. In short: we
-consecutively process new audio chunks, emit the transcripts that are confirmed
-by 2 iterations, and scroll the audio processing buffer on a timestamp of a
-confirmed complete sentence. The processing audio buffer is not too long and
-the processing is fast.
+但它不执行任何句子分割，但 Whisper 生成标点符号，而库 `faster-whisper` 和 `whisper_transcribed` 生成了单词级时间戳。简而言之：我们连续处理新的音频块，发出经过 2 次迭代确认的转录，并在确认完整句子的时间戳上滚动音频处理缓冲区。处理音频缓冲区不会太长，处理速度很快。
 
-In more detail: we use the init prompt, we handle the inaccurate timestamps, we
-re-process confirmed sentence prefixes and skip them, making sure they don't
-overlap, and we limit the processing buffer window. 
+更详细地说：我们使用初始化提示，处理不准确的时间戳，重新处理已确认的句子前缀并跳过它们，确保它们不重叠，并限制处理缓冲区窗口。
 
-Contributions are welcome.
+欢迎贡献。
 
-### Performance evaluation
+### 性能评估
 
-[See the paper.](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf)
+[查看论文](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf)
 
-
-## Contact
+## 联系方式
 
 Dominik Macháček, machacek@ufal.mff.cuni.cz
-
-
-
