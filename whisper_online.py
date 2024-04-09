@@ -20,12 +20,11 @@ def load_audio_chunk(fname, beg, end):
     return audio[beg_s:end_s]
 
 
-# Whisper backend
+# Whisper 后端
 
 class ASRBase:
 
-    sep = " "   # join transcribe words with this character (" " for whisper_timestamped,
-                # "" for faster-whisper because it emits the spaces when neeeded)
+    sep = " "   # 使用该字符连接转录单词（对于 whisper_timestamped 为 " "，对于 faster-whisper 为 ""，因为后者在需要时会插入空格）
 
     def __init__(self, lan, modelsize=None, cache_dir=None, model_dir=None, logfile=sys.stderr):
         self.logfile = logfile
@@ -40,18 +39,18 @@ class ASRBase:
 
 
     def load_model(self, modelsize, cache_dir):
-        raise NotImplemented("must be implemented in the child class")
+        raise NotImplemented(f"must be implemented in the child class\n必须在子类中实现")
 
     def transcribe(self, audio, init_prompt=""):
-        raise NotImplemented("must be implemented in the child class")
+        raise NotImplemented(f"must be implemented in the child class\n必须在子类中实现")
 
     def use_vad(self):
-        raise NotImplemented("must be implemented in the child class")
+        raise NotImplemented(f"must be implemented in the child class\n必须在子类中实现")
 
 
 class WhisperTimestampedASR(ASRBase):
-    """Uses whisper_timestamped library as the backend. Initially, we tested the code on this backend. It worked, but slower than faster-whisper.
-    On the other hand, the installation for GPU could be easier.
+    """使用 whisper_timestamped 库作为后端。最初我们在此后端上测试了代码。它运行良好，但比 faster-whisper 慢。
+    另一方面，GPU 可能更容易安装。
     """
 
     sep = " "
@@ -62,7 +61,7 @@ class WhisperTimestampedASR(ASRBase):
         from whisper_timestamped import transcribe_timestamped
         self.transcribe_timestamped = transcribe_timestamped
         if model_dir is not None:
-            print("ignoring model_dir, not implemented",file=self.logfile)
+            print(f"ignoring model_dir, not implemented\n忽略 model_dir，未实现",file=self.logfile)
         return whisper.load_model(modelsize, download_root=cache_dir)
 
     def transcribe(self, audio, init_prompt=""):
@@ -74,6 +73,7 @@ class WhisperTimestampedASR(ASRBase):
  
     def ts_words(self,r):
         # return: transcribe result object to [(beg,end,"word1"), ...]
+        # 返回：将转录结果对象转换为 [(开始，结束，"单词1"), ...]
         o = []
         for s in r["segments"]:
             for w in s["words"]:
@@ -94,7 +94,7 @@ class WhisperTimestampedASR(ASRBase):
 
 
 class FasterWhisperASR(ASRBase):
-    """Uses faster-whisper library as the backend. Works much faster, appx 4-times (in offline mode). For GPU, it requires installation with a specific CUDNN version.
+    """使用 faster-whisper 库作为后端。运行速度要快得多，大约是 4 倍（在离线模式下）。对于 GPU，它需要使用特定的 CUDNN 版本进行安装。
     """
 
     sep = ""
@@ -102,29 +102,29 @@ class FasterWhisperASR(ASRBase):
     def load_model(self, modelsize=None, cache_dir=None, model_dir=None):
         from faster_whisper import WhisperModel
         if model_dir is not None:
-            print(f"Loading whisper model from model_dir {model_dir}. modelsize and cache_dir parameters are not used.",file=self.logfile)
+            print(f"Loading whisper model from model_dir {model_dir}. modelsize and cache_dir parameters are not used.\n从 model_dir {model_dir} 加载 whisper 模型。不使用 modelsize 和 cache_dir 参数。",file=self.logfile)
             model_size_or_path = model_dir
         elif modelsize is not None:
             model_size_or_path = modelsize
         else:
-            raise ValueError("modelsize or model_dir parameter must be set")
+            raise ValueError("必须设置 modelsize 或 model_dir 参数")
 
 
-        # this worked fast and reliably on NVIDIA L40
+        # 在 NVIDIA L40 上工作得很快且可靠
         model = WhisperModel(model_size_or_path, device="cuda", compute_type="float16", download_root=cache_dir)
 
-        # or run on GPU with INT8
+        # 或者在 GPU 上使用 INT8 运行
         # tested: the transcripts were different, probably worse than with FP16, and it was slightly (appx 20%) slower
         #model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
 
-        # or run on CPU with INT8
-        # tested: works, but slow, appx 10-times than cuda FP16
+        # 或者在 CPU 上使用 INT8 运行
+        # 经测试：能用，但速度慢，大约比 cuda FP16 慢 10 倍
 #        model = WhisperModel(modelsize, device="cpu", compute_type="int8") #, download_root="faster-disk-cache-dir/")
         return model
 
     def transcribe(self, audio, init_prompt=""):
 
-        # tested: beam_size=5 is faster and better than 1 (on one 200 second document from En ESIC, min chunk 0.01)
+        # 经测试：beam_size=5 比 1 更快且更好（在来自 En ESIC 的一个 200 秒文档上，最小块 0.01）
         segments, info = self.model.transcribe(audio, language=self.original_language, initial_prompt=init_prompt, beam_size=5, word_timestamps=True, condition_on_previous_text=True, **self.transcribe_kargs)
         #print(info)  # info contains language detection result
 
@@ -135,6 +135,7 @@ class FasterWhisperASR(ASRBase):
         for segment in segments:
             for word in segment.words:
                 # not stripping the spaces -- should not be merged with them!
+                # 不去掉空格 -- 不应该与空格合并！
                 w = word.word
                 t = (word.start, word.end, w)
                 o.append(t)
@@ -165,21 +166,21 @@ class OpenaiApiASR(ASRBase):
 
         self.use_vad_opt = False
 
-        # reset the task in set_translate_task
+        # 在 set_translate_task 函数中重置任务
         self.task = "transcribe"
 
     def load_model(self, *args, **kwargs):
         from openai import OpenAI
         self.client = OpenAI()
 
-        self.transcribed_seconds = 0  # for logging how many seconds were processed by API, to know the cost
+        self.transcribed_seconds = 0  # for logging how many seconds were processed by API, to know the cost|用于记录 API 处理了多少秒的日志，以了解成本
         
 
     def ts_words(self, segments):
         no_speech_segments = []
         if self.use_vad_opt:
             for segment in segments.segments:
-                # TODO: threshold can be set from outside
+                # TODO：可以从外部设置阈值
                 if segment["no_speech_prob"] > 0.8:
                     no_speech_segments.append((segment.get("start"), segment.get("end")))
 
@@ -198,13 +199,13 @@ class OpenaiApiASR(ASRBase):
         return [s["end"] for s in res.words]
 
     def transcribe(self, audio_data, prompt=None, *args, **kwargs):
-        # Write the audio data to a buffer
+        # 将音频数据写入缓冲区
         buffer = io.BytesIO()
         buffer.name = "temp.wav"
         sf.write(buffer, audio_data, samplerate=16000, format='WAV', subtype='PCM_16')
-        buffer.seek(0)  # Reset buffer's position to the beginning
+        buffer.seek(0)  # 将缓冲区的位置重置到开头
 
-        self.transcribed_seconds += math.ceil(len(audio_data)/16000)  # it rounds up to the whole seconds
+        self.transcribed_seconds += math.ceil(len(audio_data)/16000)  # 将时间舍入到整秒
 
         params = {
             "model": self.modelname,
