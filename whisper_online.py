@@ -224,7 +224,7 @@ class OpenaiApiASR(ASRBase):
         else:
             proc = self.client.audio.transcriptions
 
-        # Process transcription/translation
+        # 处理转录/翻译
         transcript = proc.create(**params)
         print(f"OpenAI API processed accumulated {self.transcribed_seconds} seconds",file=self.logfile)
 
@@ -252,8 +252,8 @@ class HypothesisBuffer:
         self.logfile = logfile
 
     def insert(self, new, offset):
-        # compare self.commited_in_buffer and new. It inserts only the words in new that extend the commited_in_buffer, it means they are roughly behind last_commited_time and new in content
-        # the new tail is added to self.new
+        # 比较 self.commited_in_buffer 和 new。仅插入 new 中扩展 commited_in_buffer 的单词，这意味着它们在时间上大致在 last_commited_time 之后，并且在内容上是新的
+        # 将新的尾部添加到 self.new 中
         
         new = [(a+offset,b+offset,t) for a,b,t in new]
         self.new = [(a,b,t) for a,b,t in new if a > self.last_commited_time-0.1]
@@ -262,7 +262,7 @@ class HypothesisBuffer:
             a,b,t = self.new[0]
             if abs(a - self.last_commited_time) < 1:
                 if self.commited_in_buffer:
-                    # it's going to search for 1, 2, ..., 5 consecutive words (n-grams) that are identical in commited and new. If they are, they're dropped.
+                    # 它将搜索在 commited 和 new 中相同的连续的 1、2、...、5 个单词（n-gram）。如果找到了相同的单词组合，它们将被丢弃。
                     cn = len(self.commited_in_buffer)
                     nn = len(self.new)
                     for i in range(1,min(min(cn,nn),5)+1):  # 5 is the maximum 
@@ -275,7 +275,7 @@ class HypothesisBuffer:
                             break
 
     def flush(self):
-        # returns commited chunk = the longest common prefix of 2 last inserts. 
+        # 返回已提交的块 = 最后两次插入的最长公共前缀。
 
         commit = []
         while self.new:
@@ -310,10 +310,10 @@ class OnlineASRProcessor:
 
     def __init__(self, asr, tokenizer=None, buffer_trimming=("segment", 15), logfile=sys.stderr):
         """asr: WhisperASR object
-        tokenizer: sentence tokenizer object for the target language. Must have a method *split* that behaves like the one of MosesTokenizer. It can be None, if "segment" buffer trimming option is used, then tokenizer is not used at all.
-        ("segment", 15)
-        buffer_trimming: a pair of (option, seconds), where option is either "sentence" or "segment", and seconds is a number. Buffer is trimmed if it is longer than "seconds" threshold. Default is the most recommended option.
-        logfile: where to store the log. 
+        asr: WhisperASR 对象
+        tokenizer: 目标语言的句子分词器对象。必须具有类似于 MosesTokenizer 的 *split* 方法。如果使用了 "segment" 缓冲区修剪选项，则可以为 None，此时不使用分词器。
+        buffer_trimming: 一个由 (选项，秒数) 组成的二元组，其中选项是 "sentence" 或 "segment"，秒数是一个数字。如果缓冲区长度超过 "秒数" 阈值，则对其进行修剪。默认情况下，这是最推荐的选项。
+        logfile: 日志存储位置。
         """
         self.asr = asr
         self.tokenizer = tokenizer
@@ -324,7 +324,8 @@ class OnlineASRProcessor:
         self.buffer_trimming_way, self.buffer_trimming_sec = buffer_trimming
 
     def init(self):
-        """run this when starting or restarting processing"""
+        """在开始或重新启动处理时运行此操作。""" 
+
         self.audio_buffer = np.array([],dtype=np.float32)
         self.buffer_time_offset = 0
 
@@ -335,9 +336,11 @@ class OnlineASRProcessor:
         self.audio_buffer = np.append(self.audio_buffer, audio)
 
     def prompt(self):
-        """Returns a tuple: (prompt, context), where "prompt" is a 200-character suffix of commited text that is inside of the scrolled away part of audio buffer. 
-        "context" is the commited text that is inside the audio buffer. It is transcribed again and skipped. It is returned only for debugging and logging reasons.
         """
+        返回一个元组：(prompt, context)，其中 "prompt" 是在音频缓冲区的滚动部分中的已提交文本的后缀，其长度为200个字符。
+        "context" 是在音频缓冲区内的已提交文本。它会再次进行转录并被跳过。仅出于调试和记录目的返回此值。
+        """
+
         k = max(0,len(self.commited)-1)
         while k > 0 and self.commited[k-1][1] > self.buffer_time_offset:
             k -= 1
@@ -346,7 +349,7 @@ class OnlineASRProcessor:
         p = [t for _,_,t in p]
         prompt = []
         l = 0
-        while p and l < 200:  # 200 characters prompt size
+        while p and l < 200:  # 200个字符的提示大小
             x = p.pop(-1)
             l += len(x)+1
             prompt.append(x)
@@ -354,9 +357,11 @@ class OnlineASRProcessor:
         return self.asr.sep.join(prompt[::-1]), self.asr.sep.join(t for _,_,t in non_prompt)
 
     def process_iter(self):
-        """Runs on the current audio buffer.
-        Returns: a tuple (beg_timestamp, end_timestamp, "text"), or (None, None, ""). 
-        The non-emty text is confirmed (committed) partial transcript.
+        
+        """
+        在当前音频缓冲区上运行。
+        返回：元组(beg_timestamp, end_timestamp, "text")，或(None, None, "")。
+        非空文本是已确认（提交）的部分转录。
         """
 
         prompt, non_prompt = self.prompt()
@@ -374,17 +379,17 @@ class OnlineASRProcessor:
         print(">>>>COMPLETE NOW:",self.to_flush(o),file=self.logfile,flush=True)
         print("INCOMPLETE:",self.to_flush(self.transcript_buffer.complete()),file=self.logfile,flush=True)
 
-        # there is a newly confirmed text
+        # 存在新确认的文本
 
-        if o and self.buffer_trimming_way == "sentence":  # trim the completed sentences
-            if len(self.audio_buffer)/self.SAMPLING_RATE > self.buffer_trimming_sec:  # longer than this
+        if o and self.buffer_trimming_way == "sentence":  # 切割完成的句子
+            if len(self.audio_buffer)/self.SAMPLING_RATE > self.buffer_trimming_sec:  # 超过此长度
                 self.chunk_completed_sentence()
 
-        
         if self.buffer_trimming_way == "segment":
-            s = self.buffer_trimming_sec  # trim the completed segments longer than s,
+            s = self.buffer_trimming_sec  # 切割超过 s 长度的完成段，
         else:
-            s = 30 # if the audio buffer is longer than 30s, trim it
+            s = 30 # 如果音频缓冲区超过 30 秒，对其进行切割
+
         
         if len(self.audio_buffer)/self.SAMPLING_RATE > s:
             self.chunk_completed_segment(res)
