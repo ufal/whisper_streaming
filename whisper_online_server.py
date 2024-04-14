@@ -5,6 +5,7 @@ import sys
 import argparse
 import os
 import logging
+import numpy as np
 
 parser = argparse.ArgumentParser()
 
@@ -33,34 +34,13 @@ SAMPLING_RATE = 16000
 size = args.model
 language = args.lan
 
-t = time.time()
-logging.debug(f"Loading Whisper {size} model for {language}...")
-
-if args.backend == "faster-whisper":
-    from faster_whisper import WhisperModel
-    asr_cls = FasterWhisperASR
-    logging.getLogger("faster_whisper").setLevel(logging.WARNING)
-else:
-    import whisper
-    import whisper_timestamped
-#    from whisper_timestamped_model import WhisperTimestampedASR
-    asr_cls = WhisperTimestampedASR
-
-asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
+asr = asr_factory(args)
 
 if args.task == "translate":
     asr.set_translate_task()
     tgt_language = "en"
 else:
     tgt_language = language
-
-e = time.time()
-logging.debug(f"done. It took {round(e-t,2)} seconds.")
-
-if args.vad:
-    logging.debug("setting VAD filter")
-    asr.use_vad()
-
 
 min_chunk = args.min_chunk_size
 
@@ -141,7 +121,7 @@ class ServerProcessor:
             if not raw_bytes:
                 break
             sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
-            audio, _ = librosa.load(sf,sr=SAMPLING_RATE)
+            audio, _ = librosa.load(sf,sr=SAMPLING_RATE,dtype=np.float32)
             out.append(audio)
         if not out:
             return None
