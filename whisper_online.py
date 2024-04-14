@@ -104,6 +104,7 @@ class FasterWhisperASR(ASRBase):
 
     def load_model(self, modelsize=None, cache_dir=None, model_dir=None):
         from faster_whisper import WhisperModel
+        logging.getLogger("faster_whisper").setLevel(logging.WARNING)
         if model_dir is not None:
             logging.debug(f"Loading whisper model from model_dir {model_dir}. modelsize and cache_dir parameters are not used.")
             model_size_or_path = model_dir
