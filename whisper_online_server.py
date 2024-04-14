@@ -4,17 +4,27 @@ from whisper_online import *
 import sys
 import argparse
 import os
+import logging
+
 parser = argparse.ArgumentParser()
 
 # server options
 parser.add_argument("--host", type=str, default='localhost')
 parser.add_argument("--port", type=int, default=43007)
 
+parser.add_argument("-l", "--log-level", dest="log_level", 
+                    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                    help="Set the log level",
+                    default='INFO')
+
 
 # options from whisper_online
 add_shared_args(parser)
 args = parser.parse_args()
 
+if args.log_level:
+    logging.basicConfig(format='whisper-server-%(levelname)s: %(message)s',
+                        level=getattr(logging, args.log_level))
 
 # setting whisper object by args 
 
@@ -24,7 +34,7 @@ size = args.model
 language = args.lan
 
 t = time.time()
-print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",flush=True)
+logging.debug(f"Loading Whisper {size} model for {language}...")
 
 if args.backend == "faster-whisper":
     from faster_whisper import WhisperModel
@@ -44,10 +54,10 @@ else:
     tgt_language = language
 
 e = time.time()
-print(f"done. It took {round(e-t,2)} seconds.",file=sys.stderr)
+logging.debug(f"done. It took {round(e-t,2)} seconds.")
 
 if args.vad:
-    print("setting VAD filter",file=sys.stderr)
+    logging.debug("setting VAD filter")
     asr.use_vad()
 
 
@@ -70,18 +80,13 @@ if os.path.exists(demo_audio_path):
     # warm up the ASR, because the very first transcribe takes much more time than the other
     asr.transcribe(a)
 else:
-    print("Whisper is not warmed up",file=sys.stderr)
-
-
+    logging.info("Whisper is not warmed up")
 
 
 ######### Server objects
 
 import line_packet
 import socket
-
-import logging
-
 
 class Connection:
     '''it wraps conn object'''
@@ -190,11 +195,6 @@ class ServerProcessor:
 #        self.send_result(o)
 
 
-
-
-# Start logging.
-level = logging.INFO
-logging.basicConfig(level=level, format='whisper-server-%(levelname)s: %(message)s')
 
 # server loop
 
