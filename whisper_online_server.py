@@ -63,7 +63,7 @@ online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming,
 
 
 
-if os.path.exists(args.warmup_file):
+if args.warmup_file and os.path.exists(args.warmup_file):
     # load the audio into the LRU cache before we start the timer
     a = load_audio_chunk(args.warmup_file,0,1)
 
