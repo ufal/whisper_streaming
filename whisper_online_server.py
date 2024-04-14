@@ -10,6 +10,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--host", type=str, default='localhost')
 parser.add_argument("--port", type=int, default=43007)
 
+parser.add_argument("--warmup-file", type=str, dest="warmup_file")
+
 
 # options from whisper_online
 add_shared_args(parser)
@@ -61,10 +63,9 @@ online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming,
 
 
 
-demo_audio_path = "cs-maji-2.16k.wav"
-if os.path.exists(demo_audio_path):
+if os.path.exists(args.warmup_file):
     # load the audio into the LRU cache before we start the timer
-    a = load_audio_chunk(demo_audio_path,0,1)
+    a = load_audio_chunk(args.warmup_file,0,1)
 
     # TODO: it should be tested whether it's meaningful
     # warm up the ASR, because the very first transcribe takes much more time than the other
