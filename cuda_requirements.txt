@@ -1,0 +1,2 @@
+nvidia-cublas-cu12
+nvidia-cudnn-cu11==8.9.6.50
