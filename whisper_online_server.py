@@ -39,6 +39,7 @@ logging.debug(f"Loading Whisper {size} model for {language}...")
 if args.backend == "faster-whisper":
     from faster_whisper import WhisperModel
     asr_cls = FasterWhisperASR
+    logging.getLogger("faster_whisper").setLevel(logging.WARNING)
 else:
     import whisper
     import whisper_timestamped
@@ -80,7 +81,7 @@ if os.path.exists(demo_audio_path):
     # warm up the ASR, because the very first transcribe takes much more time than the other
     asr.transcribe(a)
 else:
-    logging.info("Whisper is not warmed up")
+    logging.debug("Whisper is not warmed up")
 
 
 ######### Server objects
@@ -135,8 +136,6 @@ class ServerProcessor:
         out = []
         while sum(len(x) for x in out) < self.min_chunk*SAMPLING_RATE:
             raw_bytes = self.connection.non_blocking_receive_audio()
-            print(raw_bytes[:10])
-            print(len(raw_bytes))
             if not raw_bytes:
                 break
             sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
@@ -167,7 +166,7 @@ class ServerProcessor:
             print("%1.0f %1.0f %s" % (beg,end,o[2]),flush=True,file=sys.stderr)
             return "%1.0f %1.0f %s" % (beg,end,o[2])
         else:
-            print(o,file=sys.stderr,flush=True)
+            # No text, so no output
             return None
 
     def send_result(self, o):
@@ -181,14 +180,13 @@ class ServerProcessor:
         while True:
             a = self.receive_audio_chunk()
             if a is None:
-                print("break here",file=sys.stderr)
                 break
             self.online_asr_proc.insert_audio_chunk(a)
             o = online.process_iter()
             try:
                 self.send_result(o)
             except BrokenPipeError:
-                print("broken pipe -- connection closed?",file=sys.stderr)
+                logging.info("broken pipe -- connection closed?")
                 break
 
 #        o = online.finish()  # this should be working
