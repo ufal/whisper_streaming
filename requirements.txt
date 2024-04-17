@@ -1,3 +1,0 @@
-librosa
-opus-fast-mosestokenizer
-faster-whisper
