@@ -130,7 +130,7 @@ class ServerProcessor:
             print("%1.0f %1.0f %s" % (beg,end,o[2]),flush=True,file=sys.stderr)
             return "%1.0f %1.0f %s" % (beg,end,o[2])
         else:
-            # No text, so no output
+            logger.debug("No text in this segment")
             return None
 
     def send_result(self, o):
