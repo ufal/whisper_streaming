@@ -183,7 +183,7 @@ online.init()  # refresh if you're going to re-use the object for the next audio
 
 ### Server -- real-time from mic
 
-`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection. See help message (`-h` option).
+`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection and the `--warmup-file`. See the help message (`-h` option).
 
 Client example:
 

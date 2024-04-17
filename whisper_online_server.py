@@ -10,6 +10,8 @@ parser = argparse.ArgumentParser()
 # server options
 parser.add_argument("--host", type=str, default='localhost')
 parser.add_argument("--port", type=int, default=43007)
+parser.add_argument("--warmup-file", type=str, dest="warmup_file", 
+        help="The path to a speech audio wav file to warm up Whisper so that the very first chunk processing is fast. It can be e.g. https://github.com/ggerganov/whisper.cpp/raw/master/samples/jfk.wav .")
 
 
 # options from whisper_online
@@ -39,20 +41,18 @@ else:
     tokenizer = None
 online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
-
-
-demo_audio_path = "cs-maji-2.16k.wav"
-if os.path.exists(demo_audio_path):
-    # load the audio into the LRU cache before we start the timer
-    a = load_audio_chunk(demo_audio_path,0,1)
-
-    # TODO: it should be tested whether it's meaningful
-    # warm up the ASR, because the very first transcribe takes much more time than the other
-    asr.transcribe(a)
+# warm up the ASR because the very first transcribe takes more time than the others. 
+# Test results in https://github.com/ufal/whisper_streaming/pull/81
+msg = "Whisper is not warmed up. The first chunk processing may take longer."
+if args.warmup_file:
+    if os.path.isfile(args.warmup_file):
+        a = load_audio_chunk(args.warmup_file,0,1)
+        asr.transcribe(a)
+        print("INFO: Whisper is warmed up.",file=sys.stderr)
+    else:
+        print("WARNING: The warm up file is not available. "+msg,file=sys.stderr)
 else:
-    print("Whisper is not warmed up",file=sys.stderr)
-
-
+    print("WARNING: " + msg, file=sys.stderr)
 
 
 ######### Server objects
