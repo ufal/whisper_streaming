@@ -8,7 +8,6 @@ import logging
 import numpy as np
 
 logger = logging.getLogger(__name__)
-print(__name__)
 parser = argparse.ArgumentParser()
 
 # server options
@@ -17,18 +16,13 @@ parser.add_argument("--port", type=int, default=43007)
 parser.add_argument("--warmup-file", type=str, dest="warmup_file", 
         help="The path to a speech audio wav file to warm up Whisper so that the very first chunk processing is fast. It can be e.g. https://github.com/ggerganov/whisper.cpp/raw/master/samples/jfk.wav .")
 
-parser.add_argument("-l", "--log-level", dest="log_level", 
-                    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                    help="Set the log level",
-                    default='INFO')
-
 
 # options from whisper_online
 add_shared_args(parser)
 args = parser.parse_args()
 
 if args.log_level:
-    logging.basicConfig(format='whisper-server-%(levelname)s: %(message)s',
+    logging.basicConfig(format='whisper-server-%(levelname)s:%(name)s: %(message)s',
                         level=getattr(logging, args.log_level))
 
 # setting whisper object by args 
@@ -47,11 +41,11 @@ if args.warmup_file:
     if os.path.isfile(args.warmup_file):
         a = load_audio_chunk(args.warmup_file,0,1)
         asr.transcribe(a)
-        print("INFO: Whisper is warmed up.",file=sys.stderr)
+        logger.info("Whisper is warmed up.")
     else:
-        print("WARNING: The warm up file is not available. "+msg,file=sys.stderr)
+        logger.warning("The warm up file is not available. "+msg)
 else:
-    print("WARNING: " + msg, file=sys.stderr)
+    logger.warning(msg)
 
 
 ######### Server objects
