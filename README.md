@@ -3,14 +3,12 @@ Whisper realtime streaming for long speech-to-text transcription and translation
 
 **Turning Whisper into Real-Time Transcription System**
 
-Demonstration paper, by Dominik Macháček, Raj Dabre, Ondřej Bojar, 2023
+Demonstration paper, by [Dominik Macháček](https://ufal.mff.cuni.cz/dominik-machacek), [Raj Dabre](https://prajdabre.github.io/), [Ondřej Bojar](https://ufal.mff.cuni.cz/ondrej-bojar), 2023
 
-Abstract:    Whisper is one of the recent state-of-the-art multilingual speech recognition and translation models, however, it is not designed for real time transcription. In this paper, we build on top of Whisper and create Whisper-Streaming, an implementation of real-time speech transcription and translation of Whisper-like models. Whisper-Streaming uses local agreement policy with self-adaptive latency to enable streaming transcription. We show that Whisper-Streaming achieves high quality and 3.3 seconds latency on unsegmented long-form speech transcription test set, and we demonstrate its robustness and practical usability as a component in live transcription service at a multilingual conference. 
+Abstract:    Whisper is one of the recent state-of-the-art multilingual speech recognition and translation models, however, it is not designed for real-time transcription. In this paper, we build on top of Whisper and create Whisper-Streaming, an implementation of real-time speech transcription and translation of Whisper-like models. Whisper-Streaming uses local agreement policy with self-adaptive latency to enable streaming transcription. We show that Whisper-Streaming achieves high quality and 3.3 seconds latency on unsegmented long-form speech transcription test set, and we demonstrate its robustness and practical usability as a component in live transcription service at a multilingual conference. 
 
 
-Paper in proceedings: http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf
-
-Demo video: https://player.vimeo.com/video/840442741
+[Paper PDF](https://aclanthology.org/2023.ijcnlp-demo.3.pdf), [Demo video](https://player.vimeo.com/video/840442741)
 
 [Slides](http://ufallab.ms.mff.cuni.cz/~machacek/pre-prints/AACL23-2.11.2023-Turning-Whisper-oral.pdf) -- 15 minutes oral presentation at IJCNLP-AACL 2023
 
@@ -157,7 +155,7 @@ The code whisper_online.py is nicely commented, read it as the full documentatio
 
 This pseudocode describes the interface that we suggest for your implementation. You can implement any features that you need for your application.
 
-```
+```python
 from whisper_online import *
 
 src_lan = "en"  # source language
@@ -185,7 +183,7 @@ online.init()  # refresh if you're going to re-use the object for the next audio
 
 ### Server -- real-time from mic
 
-`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection. See help message (`-h` option).
+`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection and the `--warmup-file`. See the help message (`-h` option).
 
 Client example:
 
@@ -226,11 +224,19 @@ In more detail: we use the init prompt, we handle the inaccurate timestamps, we
 re-process confirmed sentence prefixes and skip them, making sure they don't
 overlap, and we limit the processing buffer window. 
 
-Contributions are welcome.
-
 ### Performance evaluation
 
 [See the paper.](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf)
+
+### Contributions
+
+Contributions are welcome. We acknowledge especially:
+
+- [The GitHub contributors](https://github.com/ufal/whisper_streaming/graphs/contributors) for their pull requests with new features and bugfixes.
+- [The translation of this repo into Chinese.](https://github.com/Gloridust/whisper_streaming_CN)
+- [Ondřej Plátek](https://opla.cz/) for the paper pre-review.
+- [Peter Polák](https://ufal.mff.cuni.cz/peter-polak) for the original idea.
+- The UEDIN team of the [ELITR project](https://elitr.eu) for the original line_packet.py.
 
 
 ## Contact

@@ -626,7 +626,7 @@ if __name__ == "__main__":
     # load the audio into the LRU cache before we start the timer
     a = load_audio_chunk(audio_path,0,1)
 
-    # warm up the ASR, because the very first transcribe takes much more time than the other
+    # warm up the ASR because the very first transcribe takes much more time than the other
     asr.transcribe(a)
 
     beg = args.start_at
