@@ -559,7 +559,7 @@ def add_shared_args(parser):
 
 def asr_factory(args, logfile=sys.stderr):
     """
-    Creates and configures an ASR instance based on the specified backend and arguments.
+    Creates and configures an ASR and ASR Online instance based on the specified backend and arguments.
     """
     backend = args.backend
     if backend == "openai-api":
@@ -584,8 +584,23 @@ def asr_factory(args, logfile=sys.stderr):
         logging.info("Setting VAD filter")
         asr.use_vad()
 
-    return asr
+    language = args.lan
+    if args.task == "translate":
+        asr.set_translate_task()
+        tgt_language = "en"  # Whisper translates into English
+    else:
+        tgt_language = language  # Whisper transcribes in this language
 
+    # Create the tokenizer
+    if args.buffer_trimming == "sentence":
+        tokenizer = create_tokenizer(tgt_language)
+    else:
+        tokenizer = None
+
+    # Create the OnlineASRProcessor
+    online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+
+    return asr, online
 ## main:
 
 if __name__ == "__main__":
@@ -613,27 +628,13 @@ if __name__ == "__main__":
     duration = len(load_audio(audio_path))/SAMPLING_RATE
     logging.info("Audio duration is: %2.2f seconds" % duration)
 
-    asr = asr_factory(args, logfile=logfile)
-    language = args.lan
-
-    if args.task == "translate":
-        asr.set_translate_task()
-        tgt_language = "en"  # Whisper translates into English
-    else:
-        tgt_language = language  # Whisper transcribes in this language
-
+    asr, online = asr_factory(args, logfile=logfile)
     min_chunk = args.min_chunk_size
-    if args.buffer_trimming == "sentence":
-        tokenizer = create_tokenizer(tgt_language)
-    else:
-        tokenizer = None
-    online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
-
 
     # load the audio into the LRU cache before we start the timer
     a = load_audio_chunk(audio_path,0,1)
 
-    # warm up the ASR, because the very first transcribe takes much more time than the other
+    # warm up the ASR because the very first transcribe takes much more time than the other
     asr.transcribe(a)
 
     beg = args.start_at
