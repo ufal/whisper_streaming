@@ -2,8 +2,6 @@
 
 """Functions for sending and receiving individual lines of text over a socket.
 
-Used by marian-server-server.py to communicate with the Marian worker.
-
 A line is transmitted using one or more fixed-size packets of UTF-8 bytes
 containing:
 
@@ -11,6 +9,7 @@ containing:
 
   - Zero or more \0 bytes as required to pad the packet to PACKET_SIZE
 
+Originally from the UEDIN team of the ELITR project. 
 """
 
 PACKET_SIZE = 65536
