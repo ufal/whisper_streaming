@@ -7,6 +7,8 @@ import os
 import logging
 import numpy as np
 
+logger = logging.getLogger(__name__)
+print(__name__)
 parser = argparse.ArgumentParser()
 
 # server options
@@ -37,13 +39,6 @@ size = args.model
 language = args.lan
 asr, online = asr_factory(args)
 min_chunk = args.min_chunk_size
-
-
-if args.buffer_trimming == "sentence":
-    tokenizer = create_tokenizer(tgt_language)
-else:
-    tokenizer = None
-online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
 # warm up the ASR because the very first transcribe takes more time than the others. 
 # Test results in https://github.com/ufal/whisper_streaming/pull/81
@@ -161,7 +156,7 @@ class ServerProcessor:
             try:
                 self.send_result(o)
             except BrokenPipeError:
-                logging.info("broken pipe -- connection closed?")
+                logger.info("broken pipe -- connection closed?")
                 break
 
 #        o = online.finish()  # this should be working
@@ -175,13 +170,13 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((args.host, args.port))
     s.listen(1)
-    logging.info('Listening on'+str((args.host, args.port)))
+    logger.info('Listening on'+str((args.host, args.port)))
     while True:
         conn, addr = s.accept()
-        logging.info('Connected to client on {}'.format(addr))
+        logger.info('Connected to client on {}'.format(addr))
         connection = Connection(conn)
         proc = ServerProcessor(connection, online, min_chunk)
         proc.process()
         conn.close()
-        logging.info('Connection to client closed')
-logging.info('Connection closed, terminating.')
+        logger.info('Connection to client closed')
+logger.info('Connection closed, terminating.')
