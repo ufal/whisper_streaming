@@ -106,7 +106,7 @@ class FasterWhisperASR(ASRBase):
 
     def load_model(self, modelsize=None, cache_dir=None, model_dir=None):
         from faster_whisper import WhisperModel
-        logging.getLogger("faster_whisper").setLevel(logger.level)
+#        logging.getLogger("faster_whisper").setLevel(logger.level)
         if model_dir is not None:
             logger.debug(f"Loading whisper model from model_dir {model_dir}. modelsize and cache_dir parameters are not used.")
             model_size_or_path = model_dir
@@ -277,7 +277,7 @@ class HypothesisBuffer:
                             words = []
                             for j in range(i):
                                 words.append(repr(self.new.pop(0)))
-                            words_msg = "\t".join(words)
+                            words_msg = " ".join(words)
                             logger.debug(f"removing last {i} words: {words_msg}")
                             break
 
@@ -405,7 +405,7 @@ class OnlineASRProcessor:
             #while k>0 and self.commited[k][1] > l:
             #    k -= 1
             #t = self.commited[k][1] 
-            logger.debug(f"chunking segment")
+            logger.debug("chunking segment")
             #self.chunk_at(t)
 
         logger.debug(f"len of buffer now: {len(self.audio_buffer)/self.SAMPLING_RATE:2.2f}")
@@ -577,10 +577,10 @@ def asr_factory(args, logfile=sys.stderr):
         # Only for FasterWhisperASR and WhisperTimestampedASR
         size = args.model
         t = time.time()
-        logger.debug(f"Loading Whisper {size} model for {args.lan}...")
+        logger.info(f"Loading Whisper {size} model for {args.lan}...")
         asr = asr_cls(modelsize=size, lan=args.lan, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
         e = time.time()
-        logger.debug(f"done. It took {round(e-t,2)} seconds.")
+        logger.info(f"done. It took {round(e-t,2)} seconds.")
 
     # Apply common configurations
     if getattr(args, 'vad', False):  # Checks if VAD argument is present and True
@@ -604,7 +604,15 @@ def asr_factory(args, logfile=sys.stderr):
     online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
     return asr, online
-## main:
+
+def set_logging(args,logger,other="_server"):
+    logging.basicConfig(#format='%(name)s 
+            format='%(levelname)s\t%(message)s')
+    logger.setLevel(args.log_level)
+    logging.getLogger("whisper_online"+other).setLevel(args.log_level)
+#    logging.getLogger("whisper_online_server").setLevel(args.log_level)
+
+
 
 if __name__ == "__main__":
 
@@ -625,9 +633,11 @@ if __name__ == "__main__":
         logger.error("No or one option from --offline and --comp_unaware are available, not both. Exiting.")
         sys.exit(1)
 
-    if args.log_level:
-        logging.basicConfig(format='whisper-%(levelname)s:%(name)s: %(message)s',
-                            level=getattr(logging, args.log_level))
+#    if args.log_level:
+#        logging.basicConfig(format='whisper-%(levelname)s:%(name)s: %(message)s',
+#                            level=getattr(logging, args.log_level))
+
+    set_logging(args,logger)
 
     audio_path = args.audio_path
 
