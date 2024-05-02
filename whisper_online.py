@@ -492,7 +492,7 @@ class OnlineASRProcessor:
         """
         o = self.transcript_buffer.complete()
         f = self.to_flush(o)
-        logger.debug("last, noncommited: {f}")
+        logger.debug(f"last, noncommited: {f}")
         return f
 
 
