@@ -679,7 +679,7 @@ if __name__ == "__main__":
         try:
             o = online.process_iter()
         except AssertionError as e:
-            log.error(f"assertion error: {repr(e)}")
+            logger.error(f"assertion error: {repr(e)}")
         else:
             output_transcript(o)
         now = None
