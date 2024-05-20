@@ -160,7 +160,6 @@ class ServerProcessor:
 # server loop
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((args.host, args.port))
     s.listen(1)
     logger.info('Listening on'+str((args.host, args.port)))
