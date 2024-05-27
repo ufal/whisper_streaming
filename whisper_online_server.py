@@ -89,7 +89,7 @@ import logging
 
 class Connection:
     '''it wraps conn object'''
-    PACKET_SIZE = 65536
+    PACKET_SIZE = 32000*5*60 # 5 minutes # was: 65536
 
     def __init__(self, conn):
         self.conn = conn
@@ -109,8 +109,11 @@ class Connection:
         return in_line
 
     def non_blocking_receive_audio(self):
-        r = self.conn.recv(self.PACKET_SIZE)
-        return r
+        try:
+            r = self.conn.recv(self.PACKET_SIZE)
+            return r
+        except ConnectionResetError:
+            return None
 
 
 import io
@@ -134,8 +137,7 @@ class ServerProcessor:
         out = []
         while sum(len(x) for x in out) < self.min_chunk*SAMPLING_RATE:
             raw_bytes = self.connection.non_blocking_receive_audio()
-            print(raw_bytes[:10])
-            print(len(raw_bytes))
+            print("received audio:",len(raw_bytes), "bytes", raw_bytes[:10])
             if not raw_bytes:
                 break
             sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
@@ -203,7 +205,6 @@ logging.basicConfig(level=level, format='whisper-server-%(levelname)s: %(message
 # server loop
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((args.host, args.port))
     s.listen(1)
     logging.info('INFO: Listening on'+str((args.host, args.port)))
