@@ -130,21 +130,28 @@ class ServerProcessor:
 
         self.last_end = None
 
+        self.is_first = True
+
     def receive_audio_chunk(self):
         # receive all audio that is available by this time
         # blocks operation if less than self.min_chunk seconds is available
         # unblocks if connection is closed or a chunk is available
         out = []
-        while sum(len(x) for x in out) < self.min_chunk*SAMPLING_RATE:
+        minlimit = self.min_chunk*SAMPLING_RATE
+        while sum(len(x) for x in out) < minlimit:
             raw_bytes = self.connection.non_blocking_receive_audio()
-            print("received audio:",len(raw_bytes), "bytes", raw_bytes[:10])
             if not raw_bytes:
                 break
+            print("received audio:",len(raw_bytes), "bytes", raw_bytes[:10])
             sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
             audio, _ = librosa.load(sf,sr=SAMPLING_RATE)
             out.append(audio)
         if not out:
             return None
+        conc = np.concatenate(out)
+        if self.is_first and len(conc) < minlimit:
+            return None
+        self.is_first = False
         return np.concatenate(out)
 
     def format_output_transcript(self,o):
