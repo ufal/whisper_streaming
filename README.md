@@ -191,7 +191,7 @@ Client example:
 arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 ```
 
-- arecord sends realtime audio from a sound device (e.g. mic), in raw audio format -- 16000 sampling rate, mono channel, S16\_LE -- signed 16-bit integer low endian. (use the alternative to arecord that works for you)
+- a record sends realtime audio from a sound device (e.g. mic), in raw audio format -- 16000 sampling rate, mono channel, S16\_LE -- signed 16-bit integer low endian. (use the alternative to arecord that works for you)
 
 - nc is netcat with server's host and port
 
