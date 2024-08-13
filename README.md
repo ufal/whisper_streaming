@@ -233,6 +233,7 @@ overlap, and we limit the processing buffer window.
 Contributions are welcome. We acknowledge especially:
 
 - [The GitHub contributors](https://github.com/ufal/whisper_streaming/graphs/contributors) for their pull requests with new features and bugfixes.
+- [Nice explanation video](https://www.youtube.com/watch?v=_spinzpEeFM) -- published on 31st March 2024, not that newer updates are not included.
 - [The translation of this repo into Chinese.](https://github.com/Gloridust/whisper_streaming_CN)
 - [Ondřej Plátek](https://opla.cz/) for the paper pre-review.
 - [Peter Polák](https://ufal.mff.cuni.cz/peter-polak) for the original idea.
