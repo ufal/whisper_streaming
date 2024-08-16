@@ -165,9 +165,9 @@ if __name__ == "__main__":
 
             if end >= duration:
                 break
-            
+
             beg = end
-            
+
             if end + min_chunk > duration:
                 end = duration
             else:
