@@ -33,6 +33,8 @@ Please, cite us. [Bibtex citation](http://www.afnlp.org/conferences/ijcnlp2023/p
 
 1) ``pip install librosa`` -- audio processing library
 
+Note: for the VAD I need to `pip install torch torchaudio`.
+
 2) Whisper backend.
 
 Two alternative backends are integrated. The most recommended one is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.

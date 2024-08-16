@@ -30,11 +30,12 @@ print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",
 if args.backend == "faster-whisper":
     from faster_whisper import WhisperModel
     asr_cls = FasterWhisperASR
-else:
+elif args.backend == "whisper_timestamped":
     import whisper
-    import whisper_timestamped
-#    from whisper_timestamped_model import WhisperTimestampedASR
+    from whisper_online import WhisperTimestampedASR
     asr_cls = WhisperTimestampedASR
+else:
+    raise ValueError(f"Unknown {args.backend=}")
 
 asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
 
@@ -44,25 +45,23 @@ if args.task == "translate":
 else:
     tgt_language = language
 
-e = time.time()
-print(f"done. It took {round(e-t,2)} seconds.",file=sys.stderr)
+print(f"done. It took {round(time.time()-t,2)} seconds.",file=sys.stderr)
 
 if args.vad:
     print("setting VAD filter",file=sys.stderr)
     asr.use_vad()
 
 
-min_chunk = args.min_chunk_size
-
 if args.buffer_trimming == "sentence":
     tokenizer = create_tokenizer(tgt_language)
 else:
     tokenizer = None
 if not args.vac:
+    from whisper_online import OnlineASRProcessor
     online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 else:
-    from whisper_online_vac import *
-    online = VACOnlineASRProcessor(min_chunk, asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+    from whisper_online_vac import VACOnlineASRProcessor
+    online = VACOnlineASRProcessor(args.min_chunk_size, asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
 
 demo_audio_path = "cs-maji-2.16k.wav"
@@ -219,7 +218,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         conn, addr = s.accept()
         logging.info('INFO: Connected to client on {}'.format(addr))
         connection = Connection(conn)
-        proc = ServerProcessor(connection, online, min_chunk)
+        proc = ServerProcessor(connection, online, args.min_chunk_size)
         proc.process()
         conn.close()
         logging.info('INFO: Connection to client closed')
