@@ -517,6 +517,59 @@ class OnlineASRProcessor:
             e = offset + sents[-1][1]
         return (b,e,t)
 
+class VACOnlineASRProcessor(OnlineASRProcessor):
+    '''Wraps OnlineASRProcessor with VAC (Voice Activity Controller). 
+
+    It works the same way as OnlineASRProcessor: it receives chunks of audio (e.g. 0.04 seconds), 
+    it runs VAD and continuously detects whether there is speech or not. 
+    When it detects end of speech (non-voice for 500ms), it makes OnlineASRProcessor to end the utterance immediately.
+    '''
+
+    def __init__(self, online_chunk_size, *a, **kw):
+        self.online_chunk_size = online_chunk_size
+
+        self.online = OnlineASRProcessor(*a, **kw)
+        from voice_activity_controller import VoiceActivityController
+        self.vac = VoiceActivityController(use_vad_result = False)
+
+        self.logfile = self.online.logfile
+
+        self.init()
+
+    def init(self):
+        self.online.init()
+        self.vac.reset_states()
+        self.current_online_chunk_buffer_size = 0
+        self.is_currently_final = False
+
+
+    def insert_audio_chunk(self, audio):
+        r = self.vac.detect_speech_iter(audio,audio_in_int16=False)
+        audio, is_final = r
+        print(is_final)
+        self.is_currently_final = is_final
+        self.online.insert_audio_chunk(audio)
+        self.current_online_chunk_buffer_size += len(audio)
+
+    def process_iter(self):
+        if self.is_currently_final:
+            return self.finish()
+        elif self.current_online_chunk_buffer_size > self.SAMPLING_RATE*self.online_chunk_size:
+            self.current_online_chunk_buffer_size = 0
+            ret = self.online.process_iter()
+            return ret
+        else:
+            print("no online update, only VAD", file=self.logfile)
+            return (None, None, "")
+
+    def finish(self):
+        ret = self.online.finish()
+        self.online.init(keep_offset=True)
+        self.current_online_chunk_buffer_size = 0
+        return ret
+
+
+
 WHISPER_LANG_CODES = "af,am,ar,as,az,ba,be,bg,bn,bo,br,bs,ca,cs,cy,da,de,el,en,es,et,eu,fa,fi,fo,fr,gl,gu,ha,haw,he,hi,hr,ht,hu,hy,id,is,it,ja,jw,ka,kk,km,kn,ko,la,lb,ln,lo,lt,lv,mg,mi,mk,ml,mn,mr,ms,mt,my,ne,nl,nn,no,oc,pa,pl,ps,pt,ro,ru,sa,sd,si,sk,sl,sn,so,sq,sr,su,sv,sw,ta,te,tg,th,tk,tl,tr,tt,uk,ur,uz,vi,yi,yo,zh".split(",")
 
 def create_tokenizer(lan):
@@ -561,6 +614,8 @@ def add_shared_args(parser):
     parser.add_argument('--lan', '--language', type=str, default='auto', help="Source language code, e.g. en,de,cs, or 'auto' for language detection.")
     parser.add_argument('--task', type=str, default='transcribe', choices=["transcribe","translate"],help="Transcribe or translate.")
     parser.add_argument('--backend', type=str, default="faster-whisper", choices=["faster-whisper", "whisper_timestamped", "openai-api"],help='Load only this backend for Whisper processing.')
+    parser.add_argument('--vac', action="store_true", default=False, help='Use VAC = voice activity controller.')
+    parser.add_argument('--vac-chunk-size', type=float, default=0.04, help='VAC sample size in seconds.')
     parser.add_argument('--vad', action="store_true", default=False, help='Use VAD = voice activity detection, with the default parameters.')
     parser.add_argument('--buffer_trimming', type=str, default="segment", choices=["sentence", "segment"],help='Buffer trimming strategy -- trim completed sentences marked with punctuation mark and detected by sentence segmenter, or the completed segments returned by Whisper. Sentence segmenter must be installed for "sentence" option.')
     parser.add_argument('--buffer_trimming_sec', type=float, default=15, help='Buffer trimming length threshold in seconds. If buffer length is longer, trimming sentence/segment is triggered.')
@@ -607,7 +662,11 @@ def asr_factory(args, logfile=sys.stderr):
         tokenizer = None
 
     # Create the OnlineASRProcessor
-    online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+    if args.vac:
+        
+        online = VACOnlineASRProcessor(args.min_chunk_size, asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+    else:
+        online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
     return asr, online
 
@@ -652,7 +711,10 @@ if __name__ == "__main__":
     logger.info("Audio duration is: %2.2f seconds" % duration)
 
     asr, online = asr_factory(args, logfile=logfile)
-    min_chunk = args.min_chunk_size
+    if args.vac:
+        min_chunk = args.vac_chunk_size
+    else:
+        min_chunk = args.min_chunk_size
 
     # load the audio into the LRU cache before we start the timer
     a = load_audio_chunk(audio_path,0,1)

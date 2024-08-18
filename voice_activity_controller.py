@@ -48,6 +48,7 @@ class VoiceActivityController:
             silence_in_wav)
 
         """
+        print("applying vad here")
         x = audio
         if not torch.is_tensor(x):
             try:

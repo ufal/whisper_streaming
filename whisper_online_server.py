@@ -13,8 +13,6 @@ parser = argparse.ArgumentParser()
 # server options
 parser.add_argument("--host", type=str, default='localhost')
 parser.add_argument("--port", type=int, default=43007)
-parser.add_argument('--vac', action="store_true", default=False, help='Use VAC = voice activity controller.')
-parser.add_argument('--vac-chunk-size', type=float, default=0.04, help='VAC sample size in seconds.')
 parser.add_argument("--warmup-file", type=str, dest="warmup_file", 
         help="The path to a speech audio wav file to warm up Whisper so that the very first chunk processing is fast. It can be e.g. https://github.com/ggerganov/whisper.cpp/raw/master/samples/jfk.wav .")
 
@@ -108,7 +106,7 @@ class ServerProcessor:
             raw_bytes = self.connection.non_blocking_receive_audio()
             if not raw_bytes:
                 break
-            print("received audio:",len(raw_bytes), "bytes", raw_bytes[:10])
+#            print("received audio:",len(raw_bytes), "bytes", raw_bytes[:10])
             sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
             audio, _ = librosa.load(sf,sr=SAMPLING_RATE,dtype=np.float32)
             out.append(audio)
