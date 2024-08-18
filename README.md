@@ -3,43 +3,51 @@ Whisper realtime streaming for long speech-to-text transcription and translation
 
 **Turning Whisper into Real-Time Transcription System**
 
-Demonstration paper, by Dominik Macháček, Raj Dabre, Ondřej Bojar, 2023
+Demonstration paper, by [Dominik Macháček](https://ufal.mff.cuni.cz/dominik-machacek), [Raj Dabre](https://prajdabre.github.io/), [Ondřej Bojar](https://ufal.mff.cuni.cz/ondrej-bojar), 2023
 
-Abstract:    Whisper is one of the recent state-of-the-art multilingual speech recognition and translation models, however, it is not designed for real time transcription. In this paper, we build on top of Whisper and create Whisper-Streaming, an implementation of real-time speech transcription and translation of Whisper-like models. Whisper-Streaming uses local agreement policy with self-adaptive latency to enable streaming transcription. We show that Whisper-Streaming achieves high quality and 3.3 seconds latency on unsegmented long-form speech transcription test set, and we demonstrate its robustness and practical usability as a component in live transcription service at a multilingual conference. 
+Abstract:    Whisper is one of the recent state-of-the-art multilingual speech recognition and translation models, however, it is not designed for real-time transcription. In this paper, we build on top of Whisper and create Whisper-Streaming, an implementation of real-time speech transcription and translation of Whisper-like models. Whisper-Streaming uses local agreement policy with self-adaptive latency to enable streaming transcription. We show that Whisper-Streaming achieves high quality and 3.3 seconds latency on unsegmented long-form speech transcription test set, and we demonstrate its robustness and practical usability as a component in live transcription service at a multilingual conference. 
 
 
-Paper in proceedings: http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf
-
-Demo video: https://player.vimeo.com/video/840442741
+[Paper PDF](https://aclanthology.org/2023.ijcnlp-demo.3.pdf), [Demo video](https://player.vimeo.com/video/840442741)
 
 [Slides](http://ufallab.ms.mff.cuni.cz/~machacek/pre-prints/AACL23-2.11.2023-Turning-Whisper-oral.pdf) -- 15 minutes oral presentation at IJCNLP-AACL 2023
 
-Please, cite us. [Bibtex citation](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/bib/2023.ijcnlp-demo.3.bib):
+Please, cite us. [ACL Anthology](https://aclanthology.org/2023.ijcnlp-demo.3/), [Bibtex citation](https://aclanthology.org/2023.ijcnlp-demo.3.bib):
 
 ```
-@InProceedings{machacek-dabre-bojar:2023:ijcnlp,
-  author    = {Macháček, Dominik  and  Dabre, Raj  and  Bojar, Ondřej},
-  title     = {Turning Whisper into Real-Time Transcription System},
-  booktitle      = {System Demonstrations},
-  month          = {November},
-  year           = {2023},
-  address        = {Bali, Indonesia},
-  publisher      = {Asian Federation of Natural Language Processing},
-  pages     = {17--24},
+@inproceedings{machacek-etal-2023-turning,
+    title = "Turning Whisper into Real-Time Transcription System",
+    author = "Mach{\'a}{\v{c}}ek, Dominik  and
+      Dabre, Raj  and
+      Bojar, Ond{\v{r}}ej",
+    editor = "Saha, Sriparna  and
+      Sujaini, Herry",
+    booktitle = "Proceedings of the 13th International Joint Conference on Natural Language Processing and the 3rd Conference of the Asia-Pacific Chapter of the Association for Computational Linguistics: System Demonstrations",
+    month = nov,
+    year = "2023",
+    address = "Bali, Indonesia",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.ijcnlp-demo.3",
+    pages = "17--24",
 }
 ```
 
 ## Installation
 
-1) ``pip install librosa`` -- audio processing library
+1) ``pip install librosa soundfile`` -- audio processing library
 
 Note: for the VAD I need to `pip install torch torchaudio`.
 
 2) Whisper backend.
 
-Two alternative backends are integrated. The most recommended one is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
+ Several alternative backends are integrated. The most recommended one is [faster-whisper](https://github.com/guillaumekln/faster-whisper) with GPU support. Follow their instructions for NVIDIA libraries -- we succeeded with CUDNN 8.5.0 and CUDA 11.7. Install with `pip install faster-whisper`.
 
 Alternative, less restrictive, but slower backend is [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped): `pip install git+https://github.com/linto-ai/whisper-timestamped`
+
+Thirdly, it's also possible to run this software from the [OpenAI Whisper API](https://platform.openai.com/docs/api-reference/audio/createTranscription). This solution is fast and requires no GPU, just a small VM will suffice, but you will need to pay OpenAI for api access. Also note that, since each audio fragment is processed multiple times, the [price](https://openai.com/pricing) will be higher than obvious from the pricing page, so keep an eye on costs while using. Setting a higher chunk-size will reduce costs significantly. 
+Install with: `pip install openai`
+
+For running with the openai-api backend, make sure that your [OpenAI api key](https://platform.openai.com/api-keys) is set in the `OPENAI_API_KEY` environment variable. For example, before running, do: `export OPENAI_API_KEY=sk-xxx` with *sk-xxx* replaced with your api key. 
 
 The backend is loaded only when chosen. The unused one does not have to be installed.
 
@@ -71,7 +79,7 @@ In case of installation issues of opus-fast-mosestokenizer, especially on Window
 
 ```
 usage: whisper_online.py [-h] [--min-chunk-size MIN_CHUNK_SIZE] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}] [--model_cache_dir MODEL_CACHE_DIR] [--model_dir MODEL_DIR] [--lan LAN] [--task {transcribe,translate}]
-                         [--backend {faster-whisper,whisper_timestamped}] [--vad] [--buffer_trimming {sentence,segment}] [--buffer_trimming_sec BUFFER_TRIMMING_SEC] [--start_at START_AT] [--offline] [--comp_unaware]
+                         [--backend {faster-whisper,whisper_timestamped,openai-api}] [--vad] [--buffer_trimming {sentence,segment}] [--buffer_trimming_sec BUFFER_TRIMMING_SEC] [--start_at START_AT] [--offline] [--comp_unaware]
                          audio_path
 
 positional arguments:
@@ -91,7 +99,7 @@ options:
                         Source language code, e.g. en,de,cs, or 'auto' for language detection.
   --task {transcribe,translate}
                         Transcribe or translate.
-  --backend {faster-whisper,whisper_timestamped}
+  --backend {faster-whisper,whisper_timestamped,openai-api}
                         Load only this backend for Whisper processing.
   --vad                 Use VAD = voice activity detection, with the default parameters.
   --buffer_trimming {sentence,segment}
@@ -149,7 +157,7 @@ The code whisper_online.py is nicely commented, read it as the full documentatio
 
 This pseudocode describes the interface that we suggest for your implementation. You can implement any features that you need for your application.
 
-```
+```python
 from whisper_online import *
 
 src_lan = "en"  # source language
@@ -177,7 +185,7 @@ online.init()  # refresh if you're going to re-use the object for the next audio
 
 ### Server -- real-time from mic
 
-`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection. See help message (`-h` option).
+`whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection and the `--warmup-file`. See the help message (`-h` option).
 
 Client example:
 
@@ -218,11 +226,20 @@ In more detail: we use the init prompt, we handle the inaccurate timestamps, we
 re-process confirmed sentence prefixes and skip them, making sure they don't
 overlap, and we limit the processing buffer window. 
 
-Contributions are welcome.
-
 ### Performance evaluation
 
 [See the paper.](http://www.afnlp.org/conferences/ijcnlp2023/proceedings/main-demo/cdrom/pdf/2023.ijcnlp-demo.3.pdf)
+
+### Contributions
+
+Contributions are welcome. We acknowledge especially:
+
+- [The GitHub contributors](https://github.com/ufal/whisper_streaming/graphs/contributors) for their pull requests with new features and bugfixes.
+- [Nice explanation video](https://www.youtube.com/watch?v=_spinzpEeFM) -- published on 31st March 2024, not that newer updates are not included.
+- [The translation of this repo into Chinese.](https://github.com/Gloridust/whisper_streaming_CN)
+- [Ondřej Plátek](https://opla.cz/) for the paper pre-review.
+- [Peter Polák](https://ufal.mff.cuni.cz/peter-polak) for the original idea.
+- The UEDIN team of the [ELITR project](https://elitr.eu) for the original line_packet.py.
 
 
 ## Contact

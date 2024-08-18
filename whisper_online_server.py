@@ -4,6 +4,10 @@ from whisper_online import *
 import sys
 import argparse
 import os
+import logging
+import numpy as np
+
+logger = logging.getLogger(__name__)
 parser = argparse.ArgumentParser()
 
 # server options
@@ -11,11 +15,14 @@ parser.add_argument("--host", type=str, default='localhost')
 parser.add_argument("--port", type=int, default=43007)
 parser.add_argument('--vac', action="store_true", default=False, help='Use VAC = voice activity controller.')
 parser.add_argument('--vac-chunk-size', type=float, default=0.04, help='VAC sample size in seconds.')
+parser.add_argument("--warmup-file", type=str, dest="warmup_file", 
+        help="The path to a speech audio wav file to warm up Whisper so that the very first chunk processing is fast. It can be e.g. https://github.com/ggerganov/whisper.cpp/raw/master/samples/jfk.wav .")
 
 # options from whisper_online
 add_shared_args(parser)
 args = parser.parse_args()
 
+set_logging(args,logger,other="")
 
 # setting whisper object by args 
 
@@ -23,68 +30,28 @@ SAMPLING_RATE = 16000
 
 size = args.model
 language = args.lan
+asr, online = asr_factory(args)
+min_chunk = args.min_chunk_size
 
-t = time.time()
-print(f"Loading Whisper {size} model for {language}...",file=sys.stderr,end=" ",flush=True)
-
-if args.backend == "faster-whisper":
-    from faster_whisper import WhisperModel
-    asr_cls = FasterWhisperASR
-elif args.backend == "whisper_timestamped":
-    import whisper
-    from whisper_online import WhisperTimestampedASR
-    asr_cls = WhisperTimestampedASR
+# warm up the ASR because the very first transcribe takes more time than the others. 
+# Test results in https://github.com/ufal/whisper_streaming/pull/81
+msg = "Whisper is not warmed up. The first chunk processing may take longer."
+if args.warmup_file:
+    if os.path.isfile(args.warmup_file):
+        a = load_audio_chunk(args.warmup_file,0,1)
+        asr.transcribe(a)
+        logger.info("Whisper is warmed up.")
+    else:
+        logger.critical("The warm up file is not available. "+msg)
+        sys.exit(1)
 else:
-    raise ValueError(f"Unknown {args.backend=}")
-
-asr = asr_cls(modelsize=size, lan=language, cache_dir=args.model_cache_dir, model_dir=args.model_dir)
-
-if args.task == "translate":
-    asr.set_translate_task()
-    tgt_language = "en"
-else:
-    tgt_language = language
-
-print(f"done. It took {round(time.time()-t,2)} seconds.",file=sys.stderr)
-
-if args.vad:
-    print("setting VAD filter",file=sys.stderr)
-    asr.use_vad()
-
-
-if args.buffer_trimming == "sentence":
-    tokenizer = create_tokenizer(tgt_language)
-else:
-    tokenizer = None
-if not args.vac:
-    from whisper_online import OnlineASRProcessor
-    online = OnlineASRProcessor(asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
-else:
-    from whisper_online_vac import VACOnlineASRProcessor
-    online = VACOnlineASRProcessor(args.min_chunk_size, asr,tokenizer,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
-
-
-demo_audio_path = "cs-maji-2.16k.wav"
-if os.path.exists(demo_audio_path):
-    # load the audio into the LRU cache before we start the timer
-    a = load_audio_chunk(demo_audio_path,0,1)
-
-    # TODO: it should be tested whether it's meaningful
-    # warm up the ASR, because the very first transcribe takes much more time than the other
-    asr.transcribe(a)
-else:
-    print("Whisper is not warmed up",file=sys.stderr)
-
-
+    logger.warning(msg)
 
 
 ######### Server objects
 
 import line_packet
 import socket
-
-import logging
-
 
 class Connection:
     '''it wraps conn object'''
@@ -143,7 +110,7 @@ class ServerProcessor:
                 break
             print("received audio:",len(raw_bytes), "bytes", raw_bytes[:10])
             sf = soundfile.SoundFile(io.BytesIO(raw_bytes), channels=1,endian="LITTLE",samplerate=SAMPLING_RATE, subtype="PCM_16",format="RAW")
-            audio, _ = librosa.load(sf,sr=SAMPLING_RATE)
+            audio, _ = librosa.load(sf,sr=SAMPLING_RATE,dtype=np.float32)
             out.append(audio)
         if not out:
             return None
@@ -174,7 +141,7 @@ class ServerProcessor:
             print("%1.0f %1.0f %s" % (beg,end,o[2]),flush=True,file=sys.stderr)
             return "%1.0f %1.0f %s" % (beg,end,o[2])
         else:
-            print(o,file=sys.stderr,flush=True)
+            logger.debug("No text in this segment")
             return None
 
     def send_result(self, o):
@@ -188,14 +155,13 @@ class ServerProcessor:
         while True:
             a = self.receive_audio_chunk()
             if a is None:
-                print("break here",file=sys.stderr)
                 break
             self.online_asr_proc.insert_audio_chunk(a)
             o = online.process_iter()
             try:
                 self.send_result(o)
             except BrokenPipeError:
-                print("broken pipe -- connection closed?",file=sys.stderr)
+                logger.info("broken pipe -- connection closed?")
                 break
 
 #        o = online.finish()  # this should be working
@@ -203,23 +169,18 @@ class ServerProcessor:
 
 
 
-
-# Start logging.
-level = logging.INFO
-logging.basicConfig(level=level, format='whisper-server-%(levelname)s: %(message)s')
-
 # server loop
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((args.host, args.port))
     s.listen(1)
-    logging.info('INFO: Listening on'+str((args.host, args.port)))
+    logger.info('Listening on'+str((args.host, args.port)))
     while True:
         conn, addr = s.accept()
-        logging.info('INFO: Connected to client on {}'.format(addr))
+        logger.info('Connected to client on {}'.format(addr))
         connection = Connection(conn)
         proc = ServerProcessor(connection, online, args.min_chunk_size)
         proc.process()
         conn.close()
-        logging.info('INFO: Connection to client closed')
-logging.info('INFO: Connection closed, terminating.')
+        logger.info('Connection to client closed')
+logger.info('Connection closed, terminating.')
