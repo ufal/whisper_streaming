@@ -1,7 +1,9 @@
 import torch
 
-# this is copypasted from silero-vad's vad_utils.py:
+# This is copied from silero-vad's vad_utils.py:
 # https://github.com/snakers4/silero-vad/blob/f6b1294cb27590fb2452899df98fb234dfef1134/utils_vad.py#L340
+
+# Their licence is MIT, same as ours: https://github.com/snakers4/silero-vad/blob/f6b1294cb27590fb2452899df98fb234dfef1134/LICENSE
 
 class VADIterator:
     def __init__(self,
