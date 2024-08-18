@@ -51,7 +51,8 @@ The backend is loaded only when chosen. The unused one does not have to be insta
 
 3) For voice activity controller: `pip install torch torchaudio`. Optional, but very recommended.
 
-4) Optional, not recommended: sentence segmenter (aka sentence tokenizer) 
+<details>
+<summary>4) Optional, not recommended: sentence segmenter (aka sentence tokenizer)</summary>
 
 Two buffer trimming options are integrated and evaluated. They have impact on
 the quality and latency. The default "segment" option performs better according
@@ -72,6 +73,7 @@ following segmenters, but suggestions for better alternatives are welcome.
 - we did not find a segmenter for languages `as ba bo br bs fo haw hr ht jw lb ln lo mi nn oc sa sd sn so su sw tk tl tt` that are supported by Whisper and not by wtpsplit. The default fallback option for them is wtpsplit with unspecified language. Alternative suggestions welcome.
 
 In case of installation issues of opus-fast-mosestokenizer, especially on Windows and Mac, we recommend using only the "segment" option that does not require it.
+</details>
 
 ## Usage
 
