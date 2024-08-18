@@ -244,12 +244,15 @@ overlap, and we limit the processing buffer window.
 Contributions are welcome. We acknowledge especially:
 
 - [The GitHub contributors](https://github.com/ufal/whisper_streaming/graphs/contributors) for their pull requests with new features and bugfixes.
-- [Nice explanation video](https://www.youtube.com/watch?v=_spinzpEeFM) -- published on 31st March 2024, not that newer updates are not included.
+- [Nice explanation video](https://www.youtube.com/watch?v=_spinzpEeFM) -- published on 31st March 2024, note that newer updates are not included.
 - [The translation of this repo into Chinese.](https://github.com/Gloridust/whisper_streaming_CN)
 - [Ondřej Plátek](https://opla.cz/) for the paper pre-review.
+
+Credits:
+
 - [Peter Polák](https://ufal.mff.cuni.cz/peter-polak) for the original idea.
 - The UEDIN team of the [ELITR project](https://elitr.eu) for the original line_packet.py.
-- Silero Team for their VAD [model](https://github.com/snakers4/silero-vad) and [VADIterator](https://github.com/ufal/whisper_streaming/main/silero_vad.py).
+- Silero Team for their VAD [model](https://github.com/snakers4/silero-vad) and [VADIterator](https://github.com/ufal/whisper_streaming/blob/47caa80588ee9c0fa8945a5d05f0aea6315eb837/silero_vad.py#L8).
 
 
 ## Contact
