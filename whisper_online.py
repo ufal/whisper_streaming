@@ -558,7 +558,6 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
 
     def insert_audio_chunk(self, audio):
         res = self.vac(audio)
-        print(res)
         self.audio_buffer = np.append(self.audio_buffer, audio)
 
         if res is not None:
@@ -584,11 +583,10 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
             if self.status == 'voice':
                 self.online.insert_audio_chunk(self.audio_buffer)
                 self.current_online_chunk_buffer_size += len(self.audio_buffer)
-            if self.status is not None:
                 self.clear_buffer()
-            else:  # we are at the beginning of process, no voice has ever been detected
-                # We keep the 1s because VAD may later find start of voice in it.
-                # But trimming it to prevent OOM. 
+            else:
+                # We keep 1 second because VAD may later find start of voice in it.
+                # But we trim it to prevent OOM. 
                 self.buffer_offset += max(0,len(self.audio_buffer)-self.SAMPLING_RATE)
                 self.audio_buffer = self.audio_buffer[-self.SAMPLING_RATE:]
 
