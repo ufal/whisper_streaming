@@ -1,6 +1,6 @@
 """
-Simple (hopefully) multiplatform client mimicing the linux command 
-    
+Simple (hopefully) multiplatform client mimicing the linux command
+
     arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 
 which streams audio data from the microphone to the server.
@@ -41,7 +41,7 @@ def callback(indata, frames, time, status):
 
 try:
     # Open the audio stream
-    with sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS, dtype='int16', callback=callback, blocksize=CHUNK):
+    with sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS, dtype=DTYPE, callback=callback, blocksize=CHUNK):
         print("Press Ctrl+C to stop the recording")
         while True:
             sd.sleep(args.chunk)
