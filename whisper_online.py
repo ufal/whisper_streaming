@@ -531,7 +531,7 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
         # VAC:
         import torch
         model, _ = torch.hub.load(
-            repo_or_dir='snakers4/silero-vad',
+            repo_or_dir='snakers4/silero-vad:v4.0',
             model='silero_vad'
         )
         from silero_vad import VADIterator
