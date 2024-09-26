@@ -210,14 +210,15 @@ arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 
 #### Client example on the Mac system:
 
-List microphones:
+List of sounddevices:
 ```
 ffmpeg -hide_banner -f avfoundation -list_devices true -i ""
 ```
+This command will produce a list of audio devices with their corresponding IDs. Use the ID in the next command with the -i option:
 
 Live stream raw audio:
 ```
-ffmpeg -hide_banner -f avfoundation -i ":0" -ac 1 -ar 48000 -acodec pcm_s16le -ar 16000 -f s16le -loglevel error - | nc localhost 50000
+ffmpeg -hide_banner -f avfoundation -i ":0" -ac 1 -ar 16000 -f s16le -loglevel error - | nc localhost 43001 
 ```
 
 ## Background
