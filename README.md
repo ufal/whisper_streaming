@@ -198,7 +198,7 @@ online.init()  # refresh if you're going to re-use the object for the next audio
 
 `whisper_online_server.py` has the same model options as `whisper_online.py`, plus `--host` and `--port` of the TCP connection and the `--warmup-file`. See the help message (`-h` option).
 
-Client example:
+#### Client example on the Linux system:
 
 ```
 arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
@@ -208,6 +208,18 @@ arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 
 - nc is netcat with server's host and port
 
+#### Client example on the Mac system:
+
+List of sounddevices:
+```
+ffmpeg -hide_banner -f avfoundation -list_devices true -i ""
+```
+This command will produce a list of audio devices with their corresponding IDs. Use the ID in the next command with the -i option:
+
+Live stream raw audio:
+```
+ffmpeg -hide_banner -f avfoundation -i ":0" -ac 1 -ar 16000 -f s16le -loglevel error - | nc localhost 43001 
+```
 
 ## Background
 
