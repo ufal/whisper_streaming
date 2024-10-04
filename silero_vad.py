@@ -94,4 +94,41 @@ class VADIterator:
 
         return None
 
+#######################
+# this is our workaround for Silero v5 requiring at least 512-sized audio chunks 
+# (see https://github.com/ufal/whisper_streaming/issues/116 )
 
+import numpy as np
+class FixedVADIterator(VADIterator):
+
+    def reset_states(self):
+        super().reset_states()
+        self.buffer = np.array([],dtype=np.float32)
+
+    def __call__(self, x, return_seconds=False):
+        self.buffer = np.append(self.buffer, x) 
+        if len(self.buffer) >= 512:
+            ret = super().__call__(self.buffer, return_seconds=return_seconds)
+            self.buffer = np.array([],dtype=np.float32)
+            return ret
+        return None
+
+if __name__ == "__main__":
+    # test/demonstrate the need for FixedVADIterator:
+
+    import torch
+    model, _ = torch.hub.load(
+        repo_or_dir='snakers4/silero-vad',
+        model='silero_vad'
+    )
+    vac = FixedVADIterator(model)
+#   vac = VADIterator(model)  # the second case crashes with this
+
+    # this works: for both
+    audio_buffer = np.array([0]*(512),dtype=np.float32)
+    vac(audio_buffer)
+
+    # this crashes on the non FixedVADIterator with 
+    # ops.prim.RaiseException("Input audio chunk is too short", "builtins.ValueError")
+    audio_buffer = np.array([0]*(512-1),dtype=np.float32)
+    vac(audio_buffer)
