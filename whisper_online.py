@@ -535,7 +535,7 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
             model='silero_vad'
         )
         from silero_vad import VADIterator
-        self.vac = VADIterator(model)  # we use all the default options: 500ms silence, etc.  
+        self.vac = FixedVADIterator(model)  # we use all the default options: 500ms silence, etc.  
 
         self.logfile = self.online.logfile
         self.init()
