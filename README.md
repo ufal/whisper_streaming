@@ -214,7 +214,17 @@ List of sounddevices:
 ```
 ffmpeg -hide_banner -f avfoundation -list_devices true -i ""
 ```
-This command will produce a list of audio devices with their corresponding IDs. Use the ID in the next command with the -i option:
+This command will produce a list of audio devices with their corresponding IDs. 
+The output would look something like this:
+```bash
+...
+[AVFoundation indev @ 0x123e05b20] AVFoundation audio devices:
+[AVFoundation indev @ 0x123e05b20] [0] MacBook Air Microphone
+[AVFoundation indev @ 0x123e05b20] [1] Device 1
+[AVFoundation indev @ 0x123e05b20] [2] Device 2
+...
+```
+Use the ID in the next command with the -i option. In this example I'm using a `MacBook Air` and the microphone is the device number `0`. 
 
 Live stream raw audio:
 ```
