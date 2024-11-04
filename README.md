@@ -210,7 +210,7 @@ arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 
 #### Client example on the Mac system:
 
-List of sounddevices:
+List AVFoundation devices:
 ```
 ffmpeg -hide_banner -f avfoundation -list_devices true -i ""
 ```
