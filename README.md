@@ -214,7 +214,7 @@ List AVFoundation devices:
 ```
 ffmpeg -hide_banner -f avfoundation -list_devices true -i ""
 ```
-This command will produce a list of audio devices with their corresponding IDs. 
+This command will produce a list of video and audio devices with their corresponding IDs. 
 The output would look something like this:
 ```bash
 ...
