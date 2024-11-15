@@ -192,17 +192,17 @@ class OpenaiApiASR(ASRBase):
 
         o = []
         for word in segments.words:
-            start = word.get("start")
-            end = word.get("end")
+            start = word.start
+            end = word.end
             if any(s[0] <= start <= s[1] for s in no_speech_segments):
                 # print("Skipping word", word.get("word"), "because it's in a no-speech segment")
                 continue
-            o.append((start, end, word.get("word")))
+            o.append((start, end, word.word))
         return o
 
 
     def segments_end_ts(self, res):
-        return [s["end"] for s in res.words]
+        return [s.end for s in res.words]
 
     def transcribe(self, audio_data, prompt=None, *args, **kwargs):
         # Write the audio data to a buffer
