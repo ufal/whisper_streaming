@@ -94,7 +94,7 @@ options:
   --min-chunk-size MIN_CHUNK_SIZE
                         Minimum audio chunk size in seconds. It waits up to this time to do processing. If the processing takes shorter time, it waits, otherwise it processes the whole segment that was
                         received by this time.
-  --model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large}
+  --model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large-v1,large-v2,large-v3,large,large-v3-turbo}
                         Name size of the Whisper model to use (default: large-v2). The model is automatically downloaded from the model hub if not present in model cache dir.
   --model_cache_dir MODEL_CACHE_DIR
                         Overriding the default model cache dir where models downloaded from the hub are saved
