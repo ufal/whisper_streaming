@@ -2,6 +2,7 @@ import torch
 
 # This is copied from silero-vad's vad_utils.py:
 # https://github.com/snakers4/silero-vad/blob/f6b1294cb27590fb2452899df98fb234dfef1134/utils_vad.py#L340
+# (except changed defaults)
 
 # Their licence is MIT, same as ours: https://github.com/snakers4/silero-vad/blob/f6b1294cb27590fb2452899df98fb234dfef1134/LICENSE
 
@@ -10,8 +11,8 @@ class VADIterator:
                  model,
                  threshold: float = 0.5,
                  sampling_rate: int = 16000,
-                 min_silence_duration_ms: int = 100,
-                 speech_pad_ms: int = 30
+                 min_silence_duration_ms: int = 500,  # makes sense on one recording that I checked
+                 speech_pad_ms: int = 100             # same 
                  ):
 
         """
@@ -95,11 +96,14 @@ class VADIterator:
         return None
 
 #######################
-# this is our workaround for Silero v5 requiring at least 512-sized audio chunks 
-# (see https://github.com/ufal/whisper_streaming/issues/116 )
+# because Silero now requires exactly 512-sized audio chunks 
 
 import numpy as np
 class FixedVADIterator(VADIterator):
+    '''It fixes VADIterator by allowing to process any audio length, not only exactly 512 frames at once.
+    If audio to be processed at once is long and multiple voiced segments detected, 
+    then __call__ returns the start of the first segment, and end (or middle, which means no end) of the last segment. 
+    '''
 
     def reset_states(self):
         super().reset_states()
@@ -107,11 +111,19 @@ class FixedVADIterator(VADIterator):
 
     def __call__(self, x, return_seconds=False):
         self.buffer = np.append(self.buffer, x) 
-        if len(self.buffer) >= 512:
-            ret = super().__call__(self.buffer, return_seconds=return_seconds)
-            self.buffer = np.array([],dtype=np.float32)
-            return ret
-        return None
+        ret = None
+        while len(self.buffer) >= 512:
+            r = super().__call__(self.buffer[:512], return_seconds=return_seconds)
+            self.buffer = self.buffer[512:]
+            if ret is None:
+                ret = r
+            elif r is not None:
+                if 'end' in r:
+                    ret['end'] = r['end']  # the latter end
+                if 'start' in r and 'end' in ret:  # there is an earlier start.
+                    # Remove end, merging this segment with the previous one.
+                    del ret['end']
+        return ret if ret != {} else None
 
 if __name__ == "__main__":
     # test/demonstrate the need for FixedVADIterator:

@@ -534,8 +534,8 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
             repo_or_dir='snakers4/silero-vad',
             model='silero_vad'
         )
-        from silero_vad import FixedVADIterator
-        self.vac = FixedVADIterator(model)  # we use all the default options: 500ms silence, etc.  
+        from silero_vad_iterator import FixedVADIterator
+        self.vac = FixedVADIterator(model)  # we use the default options there: 500ms silence, 100ms padding, etc.  
 
         self.logfile = self.online.logfile
         self.init()
@@ -561,24 +561,31 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
         self.audio_buffer = np.append(self.audio_buffer, audio)
 
         if res is not None:
-            frame = list(res.values())[0]
+            frame = list(res.values())[0]-self.buffer_offset
             if 'start' in res and 'end' not in res:
                 self.status = 'voice'
-                send_audio = self.audio_buffer[frame-self.buffer_offset:]
-                self.online.init(offset=frame/self.SAMPLING_RATE)
+                send_audio = self.audio_buffer[frame:]
+                self.online.init(offset=(frame+self.buffer_offset)/self.SAMPLING_RATE)
                 self.online.insert_audio_chunk(send_audio)
                 self.current_online_chunk_buffer_size += len(send_audio)
                 self.clear_buffer()
             elif 'end' in res and 'start' not in res:
                 self.status = 'nonvoice'
-                send_audio = self.audio_buffer[:frame-self.buffer_offset]
+                send_audio = self.audio_buffer[:frame]
                 self.online.insert_audio_chunk(send_audio)
                 self.current_online_chunk_buffer_size += len(send_audio)
                 self.is_currently_final = True
                 self.clear_buffer()
             else:
-                # It doesn't happen in the current code.
-                raise NotImplemented("both start and end of voice in one chunk!!!")
+                beg = res["start"]-self.buffer_offset
+                end = res["end"]-self.buffer_offset
+                self.status = 'nonvoice'
+                send_audio = self.audio_buffer[beg:end]
+                self.online.init(offset=(beg+self.buffer_offset)/self.SAMPLING_RATE)
+                self.online.insert_audio_chunk(send_audio)
+                self.current_online_chunk_buffer_size += len(send_audio)
+                self.is_currently_final = True
+                self.clear_buffer()
         else:
             if self.status == 'voice':
                 self.online.insert_audio_chunk(self.audio_buffer)
