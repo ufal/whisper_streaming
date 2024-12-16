@@ -208,6 +208,51 @@ arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 
 - nc is netcat with server's host and port
 
+## Live Transcription Web Interface
+
+This repository also includes a **FastAPI server** and an **HTML/JavaScript client** for quick testing of live speech transcription in the browser. The client uses native WebSockets and the `MediaRecorder` API to capture microphone audio in **WebM** format and send it to the server—**no additional front-end framework** is required.
+
+![Demo Screenshot](src/demo.png)
+
+### How to Launch the Server
+
+1. **Install Dependencies**:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2. **Run the FastAPI Server**:
+
+    ```bash
+    python whisper_fastapi_online_server.py --host 0.0.0.0 --port 8000
+    ```
+
+    - `--host` and `--port` let you specify the server’s IP/port.  
+
+3. **Open the Provided HTML**:
+
+    - By default, the server root endpoint `/` serves a simple `live_transcription.html` page.  
+    - Open your browser at `http://localhost:8000` (or replace `localhost` and `8000` with whatever you specified).  
+    - The page uses vanilla JavaScript and the WebSocket API to capture your microphone and stream audio to the server in real time.
+
+### How the Live Interface Works
+
+- Once you **allow microphone access**, the page records small chunks of audio using the **MediaRecorder** API in **webm/opus** format.  
+- These chunks are sent over a **WebSocket** to the FastAPI endpoint at `/ws`.  
+- The Python server decodes `.webm` chunks on the fly using **FFmpeg** and streams them into **Whisper** for transcription.  
+- **Partial transcription** appears as soon as enough audio is processed. The “unvalidated” text is shown in **lighter or grey color** (i.e., an ‘aperçu’) to indicate it’s still buffered partial output. Once Whisper finalizes that segment, it’s displayed in normal text.  
+- You can watch the transcription update in near real time, ideal for demos, prototyping, or quick debugging.
+
+### Deploying to a Remote Server
+
+If you want to **deploy** this setup:
+
+1. **Host the FastAPI app** behind a production-grade HTTP server (like **Uvicorn + Nginx** or Docker).  
+2. The **HTML/JS page** can be served by the same FastAPI app or a separate static host.  
+3. Users open the page in **Chrome/Firefox** (any modern browser that supports MediaRecorder + WebSocket).  
+
+No additional front-end libraries or frameworks are required. The WebSocket logic in `live_transcription.html` is minimal enough to adapt for your own custom UI or embed in other pages.
 
 ## Background
 
