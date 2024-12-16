@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcription</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        #recordButton {
+            width: 80px;
+            height: 80px;
+            font-size: 36px;
+            border: none;
+            border-radius: 50%;
+            background-color: white;
+            cursor: pointer;
+            box-shadow: 0 0px 10px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        #recordButton.recording {
+            background-color: #ff4d4d;
+            color: white;
+        }
+        #recordButton:active {
+            transform: scale(0.95);
+        }
+        #transcriptions {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: left;
+        }
+        .transcription {
+            display: inline;
+            color: black;
+        }
+        .buffer {
+            display: inline;
+            color: rgb(197, 197, 197);
+        }
+    </style>
+</head>
+<body>
+    <p id="status">Click to start transcription</p>
+    <button id="recordButton">🎙️</button>
+    <div id="transcriptions"></div>
+
+    <script>
+        let isRecording = false, websocket, recorder;
+
+        const statusText = document.getElementById("status");
+        const recordButton = document.getElementById("recordButton");
+        const transcriptionsDiv = document.getElementById("transcriptions");
+
+        let fullTranscription = ""; // Store confirmed transcription
+
+        function setupWebSocket() {
+            websocket = new WebSocket("ws://localhost:8000/ws");
+            websocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const { transcription, buffer } = data;
+
+                // Update confirmed transcription
+                fullTranscription += transcription;
+
+                // Update the transcription display
+                transcriptionsDiv.innerHTML = `
+                    <span class="transcription">${fullTranscription}</span>
+                    <span class="buffer">${buffer}</span>
+                `;
+            };
+        }
+
+        async function startRecording() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+            recorder.ondataavailable = (e) => websocket?.send(e.data);
+            recorder.start(3000);
+            isRecording = true;
+            updateUI();
+        }
+
+        function stopRecording() {
+            recorder?.stop();
+            recorder = null;
+            isRecording = false;
+            websocket?.close();
+            websocket = null;
+            updateUI();
+        }
+
+        async function toggleRecording() {
+            if (isRecording) stopRecording();
+            else {
+                setupWebSocket();
+                await startRecording();
+            }
+        }
+
+        function updateUI() {
+            recordButton.classList.toggle("recording", isRecording);
+            statusText.textContent = isRecording ? "Recording..." : "Click to start transcription";
+        }
+
+        recordButton.addEventListener("click", toggleRecording);
+    </script>
+</body>
+</html>
