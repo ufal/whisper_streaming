@@ -208,6 +208,10 @@ arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 
 - nc is netcat with server's host and port
 
+### With WebSocket, FastAPI and web demo
+
+Follow https://github.com/QuentinFuxa/whisper_streaming_web . Contributed by @QuentinFuxa.
+
 
 ## Background
 
