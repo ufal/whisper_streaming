@@ -158,7 +158,7 @@ class FasterWhisperASR(ASRBase):
 
 class MLXWhisper(ASRBase):
     """
-    Uses MPX Whisper library as the backend, optimized for Apple Silicon.
+    Uses MLX Whisper library as the backend, optimized for Apple Silicon.
     Models available: https://huggingface.co/collections/mlx-community/whisper-663256f9964fbb1177db93dc
     Significantly faster than faster-whisper (without CUDA) on Apple M1. 
     """
