@@ -190,11 +190,13 @@ class MLXWhisper(ASRBase):
         
         self.model_size_or_path = model_size_or_path
         
-        # In mlx_whisper.transcribe, dtype is defined as:
-        # dtype = mx.float16 if decode_options.get("fp16", True) else mx.float32
-        # Since we do not use decode_options in self.transcribe, we will set dtype to mx.float16
-        dtype = mx.float16 
-        ModelHolder.get_model(model_size_or_path, dtype) #Model is preloaded to avoid loading it every time
+        # Note: ModelHolder.get_model loads the model into a static class variable, 
+        # making it a global resource. This means:
+        # - Only one model can be loaded at a time; switching models requires reloading.
+        # - This approach may not be suitable for scenarios requiring multiple models simultaneously,
+        #   such as using whisper-streaming as a module with varying model sizes.
+        dtype = mx.float16 # Default to mx.float16. In mlx_whisper.transcribe: dtype = mx.float16 if decode_options.get("fp16", True) else mx.float32
+        ModelHolder.get_model(model_size_or_path, dtype) #Model is preloaded to avoid reloading during transcription
         
         return transcribe
     
