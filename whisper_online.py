@@ -178,8 +178,9 @@ class MLXWhisper(ASRBase):
                 model_dir (str, optional): Direct path to a custom model directory. 
                     If specified, it overrides the `modelsize` parameter.
         """
-        from mlx_whisper import transcribe
-
+        from mlx_whisper.transcribe import ModelHolder, transcribe
+        import mlx.core as mx # Is installed with mlx-whisper
+        
         if model_dir is not None:
             logger.debug(f"Loading whisper model from model_dir {model_dir}. modelsize parameter is not used.")
             model_size_or_path = model_dir
@@ -188,6 +189,13 @@ class MLXWhisper(ASRBase):
             logger.debug(f"Loading whisper model {modelsize}. You use mlx whisper, so {model_size_or_path} will be used.")
         
         self.model_size_or_path = model_size_or_path
+        
+        # In mlx_whisper.transcribe, dtype is defined as:
+        # dtype = mx.float16 if decode_options.get("fp16", True) else mx.float32
+        # Since we do not use decode_options in self.transcribe, we will set dtype to mx.float16
+        dtype = mx.float16 
+        ModelHolder.get_model(model_size_or_path, dtype) #Model is preloaded to avoid loading it every time
+        
         return transcribe
     
     def translate_model_name(self, model_name):
