@@ -48,7 +48,7 @@ else:
 
 ######### Server objects
 
-import line_packet
+from whisper_streaming import line_packet
 import socket
 
 class Connection:
