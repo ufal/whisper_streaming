@@ -824,7 +824,7 @@ def asr_factory(args, logfile=sys.stderr):
     # Create the OnlineASRProcessor
     if args.vac:
         
-        online = VACOnlineASRProcessor(args.min_chunk_size, asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
+        online = VACOnlineASRProcessor(args.vac_chunk_size,asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
     else:
         online = OnlineASRProcessor(asr,tokenizer,logfile=logfile,buffer_trimming=(args.buffer_trimming, args.buffer_trimming_sec))
 
