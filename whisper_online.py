@@ -10,6 +10,10 @@ import io
 import soundfile as sf
 import math
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 @lru_cache(10**6)
