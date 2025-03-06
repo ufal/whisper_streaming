@@ -275,13 +275,14 @@ class MLXWhisper(ASRBase):
 class OpenaiApiASR(ASRBase):
     """Uses OpenAI's Whisper API for audio transcription."""
 
-    def __init__(self, lan=None, temperature=0, logfile=sys.stderr):
+    def __init__(self, lan=None, temperature=0, logfile=sys.stderr, samplerate=16000):
         self.logfile = logfile
 
         self.modelname = "whisper-1"  
         self.original_language = None if lan == "auto" else lan # ISO-639-1 language code
         self.response_format = "verbose_json" 
         self.temperature = temperature
+        self.samplerate = samplerate
 
         self.load_model()
 
@@ -323,10 +324,10 @@ class OpenaiApiASR(ASRBase):
         # Write the audio data to a buffer
         buffer = io.BytesIO()
         buffer.name = "temp.wav"
-        sf.write(buffer, audio_data, samplerate=16000, format='WAV', subtype='PCM_16')
+        sf.write(buffer, audio_data, samplerate=self.samplerate, format='WAV', subtype='PCM_16')
         buffer.seek(0)  # Reset buffer's position to the beginning
 
-        self.transcribed_seconds += math.ceil(len(audio_data)/16000)  # it rounds up to the whole seconds
+        self.transcribed_seconds += math.ceil(len(audio_data)/self.samplerate)  # it rounds up to the whole seconds
 
         params = {
             "model": self.modelname,
