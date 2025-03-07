@@ -7,6 +7,7 @@ import time
 import logging
 
 import io
+import os
 import soundfile as sf
 import math
 
@@ -531,7 +532,7 @@ class OnlineASRProcessor:
 
     def chunk_completed_sentence(self):
         if self.commited == []: return
-        logger.debug(self.commited)
+        logger.debug('commited %s', self.commited)
         sents = self.words_to_sentences(self.commited)
         for s in sents:
             logger.debug(f"\t\tSENT: {s}")
