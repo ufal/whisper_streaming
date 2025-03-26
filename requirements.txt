@@ -1,0 +1,7 @@
+openai==1.65.3
+python-dotenv==0.19.0
+librosa==0.6.3
+soundfile==0.10.3.post1
+numpy>=1.18.1
+tokenize-uk==0.2.0
+opus-fast-mosestokenizer==0.0.8.7
