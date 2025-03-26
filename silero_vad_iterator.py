@@ -9,10 +9,10 @@ import torch
 class VADIterator:
     def __init__(self,
                  model,
-                 threshold: float = 0.5,
-                 sampling_rate: int = 16000,
+                 threshold: float = 0.50,
+                 samplerate: int = 16000,
                  min_silence_duration_ms: int = 500,  # makes sense on one recording that I checked
-                 speech_pad_ms: int = 100             # same 
+                 speech_pad_ms: int = 100             # same
                  ):
 
         """
@@ -26,7 +26,7 @@ class VADIterator:
             Speech threshold. Silero VAD outputs speech probabilities for each audio chunk, probabilities ABOVE this value are considered as SPEECH.
             It is better to tune this parameter for each dataset separately, but "lazy" 0.5 is pretty good for most datasets.
 
-        sampling_rate: int (default - 16000)
+        samplerate: int (default - 16000)
             Currently silero VAD models support 8000 and 16000 sample rates
 
         min_silence_duration_ms: int (default - 100 milliseconds)
@@ -38,13 +38,18 @@ class VADIterator:
 
         self.model = model
         self.threshold = threshold
-        self.sampling_rate = sampling_rate
+        self.samplerate = samplerate
 
-        if sampling_rate not in [8000, 16000]:
+        if samplerate not in [8000, 16000]:
             raise ValueError('VADIterator does not support sampling rates other than [8000, 16000]')
 
-        self.min_silence_samples = sampling_rate * min_silence_duration_ms / 1000
-        self.speech_pad_samples = sampling_rate * speech_pad_ms / 1000
+        if samplerate == 8000:
+            self.vad_chunk_size = 256
+        elif samplerate == 16000:
+            self.vad_chunk_size = 512
+
+        self.min_silence_samples = samplerate * min_silence_duration_ms / 1000
+        self.speech_pad_samples = samplerate * speech_pad_ms / 1000
         self.reset_states()
 
     def reset_states(self):
@@ -72,7 +77,7 @@ class VADIterator:
         window_size_samples = len(x[0]) if x.dim() == 2 else len(x)
         self.current_sample += window_size_samples
 
-        speech_prob = self.model(x, self.sampling_rate).item()
+        speech_prob = self.model(x, self.samplerate).item()
 
         if (speech_prob >= self.threshold) and self.temp_end:
             self.temp_end = 0
@@ -80,7 +85,7 @@ class VADIterator:
         if (speech_prob >= self.threshold) and not self.triggered:
             self.triggered = True
             speech_start = self.current_sample - self.speech_pad_samples
-            return {'start': int(speech_start) if not return_seconds else round(speech_start / self.sampling_rate, 1)}
+            return {'start': int(speech_start) if not return_seconds else round(speech_start / self.samplerate, 1)}
 
         if (speech_prob < self.threshold - 0.15) and self.triggered:
             if not self.temp_end:
@@ -91,16 +96,16 @@ class VADIterator:
                 speech_end = self.temp_end + self.speech_pad_samples
                 self.temp_end = 0
                 self.triggered = False
-                return {'end': int(speech_end) if not return_seconds else round(speech_end / self.sampling_rate, 1)}
+                return {'end': int(speech_end) if not return_seconds else round(speech_end / self.samplerate, 1)}
 
         return None
 
 #######################
-# because Silero now requires exactly 512-sized audio chunks 
+# because Silero now requires exactly 256/512-sized audio chunks
 
 import numpy as np
 class FixedVADIterator(VADIterator):
-    '''It fixes VADIterator by allowing to process any audio length, not only exactly 512 frames at once.
+    '''It fixes VADIterator by allowing to process any audio length, not only exactly 256/512 frames at once.
     If audio to be processed at once is long and multiple voiced segments detected, 
     then __call__ returns the start of the first segment, and end (or middle, which means no end) of the last segment. 
     '''
@@ -112,9 +117,9 @@ class FixedVADIterator(VADIterator):
     def __call__(self, x, return_seconds=False):
         self.buffer = np.append(self.buffer, x) 
         ret = None
-        while len(self.buffer) >= 512:
-            r = super().__call__(self.buffer[:512], return_seconds=return_seconds)
-            self.buffer = self.buffer[512:]
+        while len(self.buffer) >= self.vad_chunk_size:
+            r = super().__call__(self.buffer[:self.vad_chunk_size], return_seconds=return_seconds)
+            self.buffer = self.buffer[self.vad_chunk_size:]
             if ret is None:
                 ret = r
             elif r is not None:

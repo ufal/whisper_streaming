@@ -430,9 +430,7 @@ class HypothesisBuffer:
 
 class OnlineASRProcessor:
 
-    SAMPLING_RATE = 16000
-
-    def __init__(self, asr, tokenizer=None, buffer_trimming=("segment", 15), logfile=sys.stderr):
+    def __init__(self, asr, tokenizer=None, buffer_trimming=("segment", 15), logfile=sys.stderr, samplerate=16000):
         """asr: WhisperASR object
         tokenizer: sentence tokenizer object for the target language. Must have a method *split* that behaves like the one of MosesTokenizer. It can be None, if "segment" buffer trimming option is used, then tokenizer is not used at all.
         ("segment", 15)
@@ -442,6 +440,7 @@ class OnlineASRProcessor:
         self.asr = asr
         self.tokenizer = tokenizer
         self.logfile = logfile
+        self.samplerate = samplerate
 
         self.init()
 
@@ -488,7 +487,7 @@ class OnlineASRProcessor:
         prompt, non_prompt = self.prompt()
         logger.debug(f"PROMPT: {prompt}")
         logger.debug(f"CONTEXT: {non_prompt}")
-        logger.debug(f"transcribing {len(self.audio_buffer)/self.SAMPLING_RATE:2.2f} seconds from {self.buffer_time_offset:2.2f}")
+        logger.debug(f"transcribing {len(self.audio_buffer)/self.samplerate:2.2f} seconds from {self.buffer_time_offset:2.2f}")
         res = self.asr.transcribe(self.audio_buffer, init_prompt=prompt)
 
         # transform to [(beg,end,"word1"), ...]
@@ -505,7 +504,7 @@ class OnlineASRProcessor:
         # there is a newly confirmed text
 
         if o and self.buffer_trimming_way == "sentence":  # trim the completed sentences
-            if len(self.audio_buffer)/self.SAMPLING_RATE > self.buffer_trimming_sec:  # longer than this
+            if len(self.audio_buffer)/self.samplerate > self.buffer_trimming_sec:  # longer than this
                 self.chunk_completed_sentence()
 
         
@@ -514,11 +513,11 @@ class OnlineASRProcessor:
         else:
             s = 30 # if the audio buffer is longer than 30s, trim it
         
-        if len(self.audio_buffer)/self.SAMPLING_RATE > s:
+        if len(self.audio_buffer)/self.samplerate > s:
             self.chunk_completed_segment(res)
 
             # alternative: on any word
-            #l = self.buffer_time_offset + len(self.audio_buffer)/self.SAMPLING_RATE - 10
+            #l = self.buffer_time_offset + len(self.audio_buffer)/self.samplerate - 10
             # let's find commited word that is less
             #k = len(self.commited)-1
             #while k>0 and self.commited[k][1] > l:
@@ -527,7 +526,7 @@ class OnlineASRProcessor:
             logger.debug("chunking segment")
             #self.chunk_at(t)
 
-        logger.debug(f"len of buffer now: {len(self.audio_buffer)/self.SAMPLING_RATE:2.2f}")
+        logger.debug(f"len of buffer now: {len(self.audio_buffer)/self.samplerate:2.2f}")
         return self.to_flush(o)
 
     def chunk_completed_sentence(self):
@@ -576,7 +575,7 @@ class OnlineASRProcessor:
         """
         self.transcript_buffer.pop_commited(time)
         cut_seconds = time - self.buffer_time_offset
-        self.audio_buffer = self.audio_buffer[int(cut_seconds*self.SAMPLING_RATE):]
+        self.audio_buffer = self.audio_buffer[int(cut_seconds*self.samplerate):]
         self.buffer_time_offset = time
 
     def words_to_sentences(self, words):
@@ -639,10 +638,18 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
     When it detects end of speech (non-voice for 500ms), it makes OnlineASRProcessor to end the utterance immediately.
     '''
 
-    def __init__(self, online_chunk_size, *a, **kw):
+    def __init__(self, online_chunk_size, *a, samplerate=16000, **kw):
         self.online_chunk_size = online_chunk_size
 
-        self.online = OnlineASRProcessor(*a, **kw)
+        vad_options = {
+            "samplerate": samplerate,
+        }
+        for arg in ("threshold", "min_silence_duration_ms", "speech_pad_ms",):
+            if arg in kw:
+                vad_options[arg] = kw.pop(arg)
+
+        self.samplerate = samplerate
+        self.online = OnlineASRProcessor(*a, samplerate=samplerate, **kw)
 
         # VAC:
         import torch
@@ -651,7 +658,9 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
             model='silero_vad'
         )
         from silero_vad_iterator import FixedVADIterator
-        self.vac = FixedVADIterator(model)  # we use the default options there: 500ms silence, 100ms padding, etc.  
+
+        # we use the default options there: 500ms silence, 100ms padding, etc.
+        self.vac = FixedVADIterator(model, **vad_options)
 
         self.logfile = self.online.logfile
         self.init()
@@ -681,7 +690,7 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
             if 'start' in res and 'end' not in res:
                 self.status = 'voice'
                 send_audio = self.audio_buffer[frame:]
-                self.online.init(offset=(frame+self.buffer_offset)/self.SAMPLING_RATE)
+                self.online.init(offset=(frame+self.buffer_offset)/self.samplerate)
                 self.online.insert_audio_chunk(send_audio)
                 self.current_online_chunk_buffer_size += len(send_audio)
                 self.clear_buffer()
@@ -697,7 +706,7 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
                 end = res["end"]-self.buffer_offset
                 self.status = 'nonvoice'
                 send_audio = self.audio_buffer[beg:end]
-                self.online.init(offset=(beg+self.buffer_offset)/self.SAMPLING_RATE)
+                self.online.init(offset=(beg+self.buffer_offset)/self.samplerate)
                 self.online.insert_audio_chunk(send_audio)
                 self.current_online_chunk_buffer_size += len(send_audio)
                 self.is_currently_final = True
@@ -710,14 +719,14 @@ class VACOnlineASRProcessor(OnlineASRProcessor):
             else:
                 # We keep 1 second because VAD may later find start of voice in it.
                 # But we trim it to prevent OOM. 
-                self.buffer_offset += max(0,len(self.audio_buffer)-self.SAMPLING_RATE)
-                self.audio_buffer = self.audio_buffer[-self.SAMPLING_RATE:]
+                self.buffer_offset += max(0,len(self.audio_buffer)-self.samplerate)
+                self.audio_buffer = self.audio_buffer[-self.samplerate:]
 
 
     def process_iter(self):
         if self.is_currently_final:
             return self.finish()
-        elif self.current_online_chunk_buffer_size > self.SAMPLING_RATE*self.online_chunk_size:
+        elif self.current_online_chunk_buffer_size > self.samplerate*self.online_chunk_size:
             self.current_online_chunk_buffer_size = 0
             ret = self.online.process_iter()
             return ret
