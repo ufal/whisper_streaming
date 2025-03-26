@@ -17,14 +17,14 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 @lru_cache(10**6)
-def load_audio(fname):
-    a, _ = librosa.load(fname, sr=16000, dtype=np.float32)
+def load_audio(fname, samplerate=16000):
+    a, _ = librosa.load(fname, sr=samplerate, dtype=np.float32)
     return a
 
-def load_audio_chunk(fname, beg, end):
-    audio = load_audio(fname)
-    beg_s = int(beg*16000)
-    end_s = int(end*16000)
+def load_audio_chunk(fname, beg, end, samplerate=16000):
+    audio = load_audio(fname, samplerate)
+    beg_s = int(beg*samplerate)
+    end_s = int(end*samplerate)
     return audio[beg_s:end_s]
 
 
@@ -630,7 +630,7 @@ class OnlineASRProcessor:
             e = offset + sents[-1][1]
         return (b,e,t)
 
-class VACOnlineASRProcessor(OnlineASRProcessor):
+class VACOnlineASRProcessor():
     '''Wraps OnlineASRProcessor with VAC (Voice Activity Controller). 
 
     It works the same way as OnlineASRProcessor: it receives chunks of audio (e.g. 0.04 seconds), 
@@ -881,7 +881,7 @@ if __name__ == "__main__":
     audio_path = args.audio_path
 
     SAMPLING_RATE = 16000
-    duration = len(load_audio(audio_path))/SAMPLING_RATE
+    duration = len(load_audio(audio_path, SAMPLING_RATE))/SAMPLING_RATE
     logger.info("Audio duration is: %2.2f seconds" % duration)
 
     asr, online = asr_factory(args, logfile=logfile)
@@ -891,7 +891,7 @@ if __name__ == "__main__":
         min_chunk = args.min_chunk_size
 
     # load the audio into the LRU cache before we start the timer
-    a = load_audio_chunk(audio_path,0,1)
+    a = load_audio_chunk(audio_path,0,1, SAMPLING_RATE)
 
     # warm up the ASR because the very first transcribe takes much more time than the other
     asr.transcribe(a)
@@ -916,7 +916,7 @@ if __name__ == "__main__":
             pass
 
     if args.offline: ## offline mode processing (for testing/debugging)
-        a = load_audio(audio_path)
+        a = load_audio(audio_path, SAMPLING_RATE)
         online.insert_audio_chunk(a)
         try:
             o = online.process_iter()
@@ -928,7 +928,7 @@ if __name__ == "__main__":
     elif args.comp_unaware:  # computational unaware mode 
         end = beg + min_chunk
         while True:
-            a = load_audio_chunk(audio_path,beg,end)
+            a = load_audio_chunk(audio_path,beg,end, SAMPLING_RATE)
             online.insert_audio_chunk(a)
             try:
                 o = online.process_iter()
@@ -958,7 +958,7 @@ if __name__ == "__main__":
             if now < end+min_chunk:
                 time.sleep(min_chunk+end-now)
             end = time.time() - start
-            a = load_audio_chunk(audio_path,beg,end)
+            a = load_audio_chunk(audio_path,beg,end, SAMPLING_RATE)
             beg = end
             online.insert_audio_chunk(a)
 
