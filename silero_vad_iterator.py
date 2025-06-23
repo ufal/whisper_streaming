@@ -1,10 +1,10 @@
 import torch
 
 # This is copied from silero-vad's vad_utils.py:
-# https://github.com/snakers4/silero-vad/blob/f6b1294cb27590fb2452899df98fb234dfef1134/utils_vad.py#L340
+# https://github.com/snakers4/silero-vad/blob/94811cbe1207ec24bc0f5370b895364b8934936f/src/silero_vad/utils_vad.py#L398C1-L489C20
 # (except changed defaults)
 
-# Their licence is MIT, same as ours: https://github.com/snakers4/silero-vad/blob/f6b1294cb27590fb2452899df98fb234dfef1134/LICENSE
+# Their licence is MIT, same as ours: https://github.com/snakers4/silero-vad/blob/94811cbe1207ec24bc0f5370b895364b8934936f/LICENSE
 
 class VADIterator:
     def __init__(self,
@@ -20,7 +20,7 @@ class VADIterator:
 
         Parameters
         ----------
-        model: preloaded .jit silero VAD model
+        model: preloaded .jit/.onnx silero VAD model
 
         threshold: float (default - 0.5)
             Speech threshold. Silero VAD outputs speech probabilities for each audio chunk, probabilities ABOVE this value are considered as SPEECH.
@@ -54,13 +54,17 @@ class VADIterator:
         self.temp_end = 0
         self.current_sample = 0
 
-    def __call__(self, x, return_seconds=False):
+    @torch.no_grad()
+    def __call__(self, x, return_seconds=False, time_resolution: int = 1):
         """
         x: torch.Tensor
             audio chunk (see examples in repo)
 
         return_seconds: bool (default - False)
             whether return timestamps in seconds (default - samples)
+
+        time_resolution: int (default - 1)
+            time resolution of speech coordinates when requested as seconds
         """
 
         if not torch.is_tensor(x):
@@ -79,8 +83,8 @@ class VADIterator:
 
         if (speech_prob >= self.threshold) and not self.triggered:
             self.triggered = True
-            speech_start = self.current_sample - self.speech_pad_samples
-            return {'start': int(speech_start) if not return_seconds else round(speech_start / self.sampling_rate, 1)}
+            speech_start = max(0, self.current_sample - self.speech_pad_samples - window_size_samples)
+            return {'start': int(speech_start) if not return_seconds else round(speech_start / self.sampling_rate, time_resolution)}
 
         if (speech_prob < self.threshold - 0.15) and self.triggered:
             if not self.temp_end:
@@ -88,10 +92,10 @@ class VADIterator:
             if self.current_sample - self.temp_end < self.min_silence_samples:
                 return None
             else:
-                speech_end = self.temp_end + self.speech_pad_samples
+                speech_end = self.temp_end + self.speech_pad_samples - window_size_samples
                 self.temp_end = 0
                 self.triggered = False
-                return {'end': int(speech_end) if not return_seconds else round(speech_end / self.sampling_rate, 1)}
+                return {'end': int(speech_end) if not return_seconds else round(speech_end / self.sampling_rate, time_resolution)}
 
         return None
 
