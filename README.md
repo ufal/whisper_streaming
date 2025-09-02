@@ -1,6 +1,8 @@
 # whisper_streaming
 Whisper realtime streaming for long speech-to-text transcription and translation
 
+*Note: In 2025, WhisperStreaming is becaming outdated, replaced by [SimulStreaming](https://github.com/ufal/SimulStreaming). See [feature comparison](https://github.com/ufal/whisper_streaming/edit/main/README.md#comparison-to-simulstreaming).*
+
 **Turning Whisper into Real-Time Transcription System**
 
 Demonstration paper, by [Dominik Macháček](https://ufal.mff.cuni.cz/dominik-machacek), [Raj Dabre](https://prajdabre.github.io/), [Ondřej Bojar](https://ufal.mff.cuni.cz/ondrej-bojar), 2023
@@ -212,7 +214,7 @@ arecord -f S16_LE -c1 -r 16000 -t raw -D default | nc localhost 43001
 
 ### With WebSocket, FastAPI and web demo
 
-Follow https://github.com/QuentinFuxa/whisper_streaming_web . Contributed by @QuentinFuxa.
+Follow https://github.com/QuentinFuxa/WhisperLiveKit . Contributed by @QuentinFuxa.
 
 
 ## Background
@@ -262,6 +264,15 @@ Credits:
 - The UEDIN team of the [ELITR project](https://elitr.eu) for the original line_packet.py.
 - Silero Team for their VAD [model](https://github.com/snakers4/silero-vad) and [VADIterator](https://github.com/ufal/whisper_streaming/blob/47caa80588ee9c0fa8945a5d05f0aea6315eb837/silero_vad.py#L8).
 
+### Comparison to SimulStreaming
+
+WhisperStreaming is becoming outdated in 2025. It is being replaced by a new project named [SimulStreaming](https://github.com/ufal/SimulStreaming), by Dominik Macháček, the author of WhisperStreaming. SimulStreaming is much faster and higher quality than WhisperStreaming. It also adds an LLM translation model to be used in a cascade. 
+
+Transition: If your project already uses WhisperStreaming, the transition to SimulStreaming should be easy. The WhisperStreaming interface for long-form audio file simulation, simple demo TCP server, and VACOnlineASRProcessor, are integrated in SimulStreaming. However, they may differ in small details, the back-dependency is not planned to be maintained. 
+
+Backends: WhisperStreaming still has an advantage of more backend options; faster-whisper, whisper_timestamped, OpenAI API, and mlx-whisper have more or less suitable requirements for many diverse users. SimulStreaming implements only one backend based on torch.
+
+Licence: WhisperStreaming is under the open MIT licence. SimulStreaming is dual licenced. It is free for non-commercial use, and affordable for commercial use.
 
 ## Contact
 
