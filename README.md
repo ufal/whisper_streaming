@@ -1,7 +1,7 @@
 # whisper_streaming
 Whisper realtime streaming for long speech-to-text transcription and translation
 
-*Note: In 2025, WhisperStreaming is becaming outdated, replaced by [SimulStreaming](https://github.com/ufal/SimulStreaming). See [feature comparison](https://github.com/ufal/whisper_streaming/edit/main/README.md#comparison-to-simulstreaming).*
+*Note: In 2025, WhisperStreaming is becaming outdated, replaced by [SimulStreaming](https://github.com/ufal/SimulStreaming). See [comparison](https://github.com/ufal/whisper_streaming?tab=readme-ov-file#comparison-to-simulstreaming).*
 
 **Turning Whisper into Real-Time Transcription System**
 
