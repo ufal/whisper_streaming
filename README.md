@@ -223,8 +223,8 @@ Default Whisper is intended for audio chunks of at most 30 seconds that contain
 one full sentence. Longer audio files must be split to shorter chunks and
 merged with "init prompt". In low latency simultaneous streaming mode, the
 simple and naive chunking fixed-sized windows does not work well, it can split
-a word in the middle. It is also necessary to know when the transcribt is
-stable, should be confirmed ("commited") and followed up, and when the future
+a word in the middle. It is also necessary to know when the transcript is
+stable, should be confirmed ("committed") and followed up, and when the future
 content makes the transcript clearer. 
 
 For that, there is LocalAgreement-n policy: if n consecutive updates, each with
