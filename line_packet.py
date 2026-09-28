@@ -31,7 +31,7 @@ def send_one_line(socket, text, pad_zeros=False):
         socket: a socket object.
         text: string containing a line of text for transmission.
     """
-    text.replace('\0', '\n')
+    text = text.replace('\0', '\n')
     lines = text.splitlines()
     first_line = '' if len(lines) == 0 else lines[0]
     # TODO Is there a better way of handling bad input than 'replace'?
